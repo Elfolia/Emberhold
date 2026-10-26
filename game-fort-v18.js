@@ -193,7 +193,6 @@ Object.assign(counterCanvas.style,{position:"fixed",inset:"0",width:"100%",heigh
 document.body.appendChild(counterCanvas);
 function drawCounter(){
  const g=counterCtx;
- g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,counterCanvas.width,counterCanvas.height);
  g.setTransform(dpr,0,0,dpr,0,0);
  g.save();g.translate(W/2-camX*zoom,H/2-camY*zoom);g.scale(zoom*.58,zoom*.58);g.translate(0,-12);
  const path=(pts,fill,stroke,width=1)=>{g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.closePath();g.fillStyle=fill;g.fill();if(stroke){g.strokeStyle=stroke;g.lineWidth=width;g.stroke()}};
@@ -333,6 +332,9 @@ function render(){
   const ex=Math.round(ox+(x+1)*TILE*zoom),ey=Math.round(oy+(y+1)*TILE*zoom);
   ctx.drawImage(getTile(x,y),dx,dy,ex-dx+1,ey-dy+1);
  }
+ counterCtx.setTransform(1,0,0,1,0,0);
+ counterCtx.clearRect(0,0,counterCanvas.width,counterCanvas.height);
+ counterCtx.setTransform(dpr,0,0,dpr,0,0);
  drawFort();
  drawCounter();
  if(windCanvas.width)drawWind(performance.now());
