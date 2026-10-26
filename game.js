@@ -192,13 +192,52 @@ function render(){
   ctx.drawImage(getTile(x,y),dx,dy,ex-dx+1,ey-dy+1);
  }
 }
-function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);render()}
+// Wind lives on a transparent overlay: the expensive ground tiles never redraw for animation.
+const windCanvas=document.createElement("canvas"),windCtx=windCanvas.getContext("2d");
+windCanvas.setAttribute("aria-hidden","true");
+Object.assign(windCanvas.style,{position:"fixed",inset:"0",width:"100%",height:"100%",pointerEvents:"none",zIndex:"1"});
+document.body.appendChild(windCanvas);
+let windTufts=[],windDirty=true,lastWindFrame=0;
+function rebuildWind(){
+ windTufts=[];const STEP=58,margin=35;
+ const left=camX-W/(2*zoom)-margin,right=camX+W/(2*zoom)+margin;
+ const top=camY-H/(2*zoom)-margin,bottom=camY+H/(2*zoom)+margin;
+ for(let gy=Math.floor(top/STEP);gy<=Math.ceil(bottom/STEP);gy++)for(let gx=Math.floor(left/STEP);gx<=Math.ceil(right/STEP);gx++){
+  const r=rngAt(gx,gy,990),wx=(gx+.12+r()*.76)*STEP,wy=(gy+.12+r()*.76)*STEP;
+  const f=landscape(wx,wy);
+  if(f.soil>.56||f.mud>.3||r()>.8)continue;
+  windTufts.push({x:wx,y:wy,h:11+r()*12,lean:(r()-.5)*3,phase:r()*6.283,seed:r()*6.283,
+   strength:.45+r()*.65,shade:r()>.5?"rgba(174,201,112,.84)":"rgba(45,94,49,.85)"});
+ }
+ windDirty=false;
+}
+function drawWind(time){
+ if(document.hidden)return;
+ if(windDirty)rebuildWind();
+ windCtx.setTransform(1,0,0,1,0,0);windCtx.clearRect(0,0,windCanvas.width,windCanvas.height);
+ windCtx.setTransform(dpr,0,0,dpr,0,0);
+ const ox=W/2-camX*zoom,oy=H/2-camY*zoom,t=time*.001;
+ for(const a of windTufts){
+  const x=ox+a.x*zoom,y=oy+a.y*zoom;
+  if(x< -30||x>W+30||y< -30||y>H+30)continue;
+  // A coherent gust moves across the whole world; each tuft bends slightly differently.
+  const gust=Math.sin(t*1.15-a.x*.003+a.y*.0018)*.7+Math.sin(t*2.05+a.phase)*.3;
+  const bend=(gust*a.strength*5+a.lean)*zoom,h=a.h*zoom;
+  windCtx.lineCap="round";windCtx.lineWidth=Math.max(.65,zoom*.95);windCtx.strokeStyle=a.shade;
+  for(let k=-1;k<=1;k++){
+   const bx=x+k*3.2*zoom,by=y+(k===0?0:1.4)*zoom;
+   windCtx.beginPath();windCtx.moveTo(bx,by);
+   windCtx.quadraticCurveTo(bx+bend*.2,by-h*.65,bx+bend+(k*2.1)*zoom,by-h*(k===0?1:.75));windCtx.stroke();
+  }
+ }
+}
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);windCanvas.width=canvas.width;windCanvas.height=canvas.height;windDirty=true;render()}
 canvas.addEventListener("pointerdown",e=>{drag={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId)});
-canvas.addEventListener("pointermove",e=>{if(!drag||drag.id!==e.pointerId)return;camX-=(e.clientX-drag.x)/zoom;camY-=(e.clientY-drag.y)/zoom;drag.x=e.clientX;drag.y=e.clientY;render()});
+canvas.addEventListener("pointermove",e=>{if(!drag||drag.id!==e.pointerId)return;camX-=(e.clientX-drag.x)/zoom;camY-=(e.clientY-drag.y)/zoom;drag.x=e.clientX;drag.y=e.clientY;windDirty=true;render()});
 canvas.addEventListener("pointerup",()=>drag=null);canvas.addEventListener("pointercancel",()=>drag=null);
-canvas.addEventListener("wheel",e=>{e.preventDefault();zoom=clamp(zoom*(e.deltaY>0?.9:1.1),.75,1.5);render()},{passive:false});
+canvas.addEventListener("wheel",e=>{e.preventDefault();zoom=clamp(zoom*(e.deltaY>0?.9:1.1),.75,1.5);windDirty=true;render()},{passive:false});
 const keys={};addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 let last=performance.now();function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const v=300*dt/zoom;let moved=false;
  if(keys.a||keys.arrowleft){camX-=v;moved=true}if(keys.d||keys.arrowright){camX+=v;moved=true}if(keys.w||keys.arrowup){camY-=v;moved=true}if(keys.s||keys.arrowdown){camY+=v;moved=true}
- if(moved)render();requestAnimationFrame(loop)}
+ if(moved){windDirty=true;render()}if(now-lastWindFrame>50){drawWind(now);lastWindFrame=now}requestAnimationFrame(loop)}
 resize();requestAnimationFrame(loop);
