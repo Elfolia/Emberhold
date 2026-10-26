@@ -93,12 +93,14 @@ function mud(g,x,y,rand,size=1){
  ellipse(g,x-3*size,y-2*size,6*size,1.3*size,"#b7a17780",-.2);
 }
 // Ground-level raised structures are shaded before the smaller vegetation.
+function counterZone(x,y){return x>-175&&x<175&&y>-145&&y<145}
 function paintRelief(g,tx,ty){
  const CELL=150,MARGIN=100;
  const x0=Math.floor((tx*TILE-MARGIN)/CELL),x1=Math.ceil(((tx+1)*TILE+MARGIN)/CELL);
  const y0=Math.floor((ty*TILE-MARGIN)/CELL),y1=Math.ceil(((ty+1)*TILE+MARGIN)/CELL);
  for(let gy=y0;gy<=y1;gy++)for(let gx=x0;gx<=x1;gx++){
   const r=rngAt(gx,gy,205),wx=(gx+r())*CELL,wy=(gy+r())*CELL;
+  if(counterZone(wx,wy))continue;
   const x=wx-tx*TILE,y=wy-ty*TILE,f=landscape(wx,wy);
   if(r()<.45&&f.soil<.56){
    const rad=22+r()*24;
@@ -127,6 +129,7 @@ function paintDetails(g,tx,ty){
  const y0=Math.floor((ty*TILE-MARGIN)/CELL),y1=Math.ceil(((ty+1)*TILE+MARGIN)/CELL);
  for(let gy=y0;gy<=y1;gy++)for(let gx=x0;gx<=x1;gx++){
   const rand=rngAt(gx,gy,17),wx=gx*CELL+rand()*CELL,wy=gy*CELL+rand()*CELL;
+  if(counterZone(wx,wy))continue;
   const x=wx-tx*TILE,y=wy-ty*TILE,f=landscape(wx,wy),v=rand();
   const size=.75+rand()*.75;
   if(f.mud>.4&&v<.55)mud(g,x,y,rand,size);
@@ -156,6 +159,7 @@ function paintDetails(g,tx,ty){
  const sy0=Math.floor(ty*TILE/S),sy1=Math.ceil((ty+1)*TILE/S);
  for(let gy=sy0;gy<sy1;gy++)for(let gx=sx0;gx<sx1;gx++){
   const r=rngAt(gx,gy,61),wx=(gx+r())*S,wy=(gy+r())*S;
+  if(counterZone(wx,wy))continue;
   const f=landscape(wx,wy),x=wx-tx*TILE,y=wy-ty*TILE;
   if(f.soil>.65){if(r()<.32)ellipse(g,x,y,1+r()*2,.6+r(),"#cfb47788")}
   else if(r()<.34){stroke(g,r()<.5?"#b9c778aa":"#2b5c32b0",.7);g.beginPath();g.moveTo(x,y);g.lineTo(x+(r()-.5)*4,y-3-r()*5);g.stroke()}
@@ -180,6 +184,46 @@ function makeTile(tx,ty){
  g.putImageData(image,0,0);paintRelief(g,tx,ty);paintDetails(g,tx,ty);return c;
 }
 function getTile(x,y){const key=x+","+y;if(cache.has(key)){const t=cache.get(key);cache.delete(key);cache.set(key,t);return t}const t=makeTile(x,y);cache.set(key,t);if(cache.size>MAX_CACHE)cache.delete(cache.keys().next().value);return t}
+// Hand-drawn, open-backed market counter. The center is a walkable plank floor,
+// with service surfaces only on three sides; no baked-in ground decorations.
+function drawCounter(){
+ const ox=W/2-camX*zoom,oy=H/2-camY*zoom;
+ ctx.save();ctx.translate(ox,oy);ctx.scale(zoom,zoom);
+ if(175*zoom<1){ctx.restore();return}
+ const g=ctx;
+ const poly=(points,fill,outline,width=1)=>{g.beginPath();g.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)g.lineTo(points[i][0],points[i][1]);g.closePath();g.fillStyle=fill;g.fill();if(outline){g.strokeStyle=outline;g.lineWidth=width;g.stroke()}};
+ const line=(pts,color,width)=>{g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.strokeStyle=color;g.lineWidth=width;g.lineCap="round";g.stroke()};
+ // Soft grounded shadow and walkable wood platform (rear entrance stays open).
+ ellipse(g,4,24,157,112,"#152c1d64");
+ poly([[-138,-95],[122,-95],[154,95],[-154,95]],"#54412d","#2d3228",5);
+ poly([[-132,-91],[116,-91],[146,87],[-146,87]],"#9c7950","#c6a071",2);
+ for(let j=0;j<10;j++){
+  const y=-86+j*18;line([[-134+j*.5,y],[123+j*2,y]],j%2?"#5d4c35":"#6b543a",2.5);
+  line([[-130,y+3],[120,y+3]],"#d3ad74a0",1);
+ }
+ // Raised counter runs left, front and right, enclosing a clear walkable workspace.
+ poly([[-148,-74],[-111,-77],[-108,51],[-148,68]],"#493225","#291f1b",3);
+ poly([[113,-77],[148,-71],[151,67],[109,51]],"#493225","#291f1b",3);
+ poly([[-147,53],[149,53],[159,90],[-158,90]],"#513522","#2c211b",4);
+ // Carved vertical panels facing the viewer.
+ for(let x=-137;x<148;x+=29){poly([[x,63],[x+24,63],[x+25,84],[x,84]],x%2?"#715034":"#785638","#3b2a21",1.4);line([[x+4,67],[x+20,67]],"#b18a56",1.3)}
+ // Countertop: broad warm wood, highlighted bevels, crisp hand-painted edges.
+ poly([[-157,46],[156,46],[167,61],[-167,61]],"#c69b64","#3c2a21",3);
+ poly([[-158,45],[-115,35],[-110,-73],[-151,-78]],"#bd925c","#463323",3);
+ poly([[110,-73],[151,-76],[158,45],[113,36]],"#bd925c","#463323",3);
+ line([[-155,48],[155,48]],"#f0cb88",2.2);
+ line([[-150,-72],[-148,40]],"#ebc17f",2);
+ line([[146,-72],[153,41]],"#e2b677",2);
+ // Visible joinery and gentle worn wood grain.
+ for(let j=0;j<7;j++){
+  const x=-123+j*39;line([[x,54],[x+13,56]],"#805a39a0",1);
+ }
+ for(const x of [-143,143]){ellipse(g,x,54,2.4,2.4,"#473528");ellipse(g,x,54,1,1,"#e2bf83")}
+ // A little counter sign integrated into the furniture, not an external prop.
+ poly([[-43,67],[43,67],[40,83],[-40,83]],"#3e5138","#d0ae77",1.6);
+ g.fillStyle="#e5d5a4";g.font="bold 10px Georgia,serif";g.textAlign="center";g.fillText("EMBERHOLD",0,79);
+ ctx.restore();
+}
 function render(){
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle="#42693b";ctx.fillRect(0,0,W,H);
  const ox=Math.round(W/2-camX*zoom),oy=Math.round(H/2-camY*zoom);
@@ -205,7 +249,7 @@ function rebuildWind(){
  for(let gy=Math.floor(top/STEP);gy<=Math.ceil(bottom/STEP);gy++)for(let gx=Math.floor(left/STEP);gx<=Math.ceil(right/STEP);gx++){
   const r=rngAt(gx,gy,990),wx=(gx+.12+r()*.76)*STEP,wy=(gy+.12+r()*.76)*STEP;
   const f=landscape(wx,wy);
-  if(f.soil>.56||f.mud>.3||r()>.8)continue;
+  if(counterZone(wx,wy)||f.soil>.56||f.mud>.3||r()>.8)continue;
   windTufts.push({x:wx,y:wy,h:11+r()*12,lean:(r()-.5)*3,phase:r()*6.283,seed:r()*6.283,
    strength:.45+r()*.65,shade:r()>.5?"rgba(174,201,112,.84)":"rgba(45,94,49,.85)"});
  }
