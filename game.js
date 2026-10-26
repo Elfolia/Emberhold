@@ -69,7 +69,8 @@ ctx.save();ctx.translate(p.x,p.y);ctx.scale(b.facing||1,1);
 ellipse(0,2,s*.58,s*.17,"#17251a55");
 if(bearWalkReady){
  const attacking=b.attack>0;
- const frame=attacking?Math.min(3,Math.floor((.55-b.attack)/.55*4)):b.moving?Math.floor((b.walkTime||0))%6:0;
+ // The first atlas cells clip the bear's muzzle. Only use intact, fully framed poses.
+ const frame=attacking?(b.attack>.275?2:3):b.moving?(Math.floor((b.walkTime||0))%2?4:5):5;
  const sourceX=frame*220,sourceY=attacking?170:0,groundY=attacking?161:140;
  const w=s*2.15,h=w*170/220;
  // Fixed foot anchor: sprite frames advance but feet never float off the terrain.
