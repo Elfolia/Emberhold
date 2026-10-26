@@ -521,7 +521,7 @@ function drawFallenWood(){
 function drawBackpackWood(g,now){
  if(!woodCarried)return;
  const count=Math.min(woodCarried,12),rows=Math.ceil(count/3);
- g.save();g.translate(0,-62);g.scale(zoom*(heroine.dir<0?-1:1),zoom);
+ g.save();g.translate(W/2+(heroine.x-camX)*zoom,H/2+(heroine.y-camY)*zoom);g.scale(zoom*(heroine.dir<0?-1:1),zoom);g.translate(0,-62);
  const sway=heroine.move?Math.sin(heroine.walk*4)*1.3:0;
  g.translate(0,sway);
  g.fillStyle="#6a432b";g.strokeStyle="#34261c";g.lineWidth=2;
