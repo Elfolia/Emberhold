@@ -92,53 +92,29 @@ function tree(t){if(t.respawn>0)return;let p=screen(t.x,t.y),s=scale;
 if(treeArtReady){treeGround(t);let h=s*4.25,w=h*treeArt.naturalWidth/treeArt.naturalHeight;ctx.save();if(t.shake)ctx.translate(Math.sin(elapsed*40)*s*.045,0);ctx.drawImage(treeArt,p.x-w*.5,p.y-h*.95,w,h);ctx.restore();return}
 ellipse(p.x,p.y+3,s*.55,s*.18,"#253b2877");rect(p.x-s*.13,p.y-s*1.4,s*.26,s*1.4,"#70513a");for(let i=0;i<3;i++){let off=t.shake?Math.sin(elapsed*40)*s*.08:0;ellipse(p.x+off+(i-1)*s*.3,p.y-s*(1.5+i*.3),s*(.72-i*.09),s*(.62-i*.06),["#456a47","#5e8051","#73915b"][i])}}
 function human(x,y,dress=0,small=false){let p=screen(x,y),s=scale*(small?.8:1);ellipse(p.x,p.y,s*.26,s*.1,"#18261d77");poly([[p.x-s*.18,p.y-s*.82],[p.x+s*.18,p.y-s*.82],[p.x+s*.32,p.y-s*.16],[p.x-s*.3,p.y-s*.16]],dress?"#d7bfa2":"#a8957d");rect(p.x-s*.12,p.y-s*.18,s*.09,s*.21,"#6e5546");rect(p.x+s*.07,p.y-s*.18,s*.09,s*.21,"#6e5546");ellipse(p.x,p.y-s*1.03,s*.2,s*.26,"#e1b48a");ellipse(p.x-s*.045,p.y-s*1.18,s*.24,s*.19,"#8b6a3e");rect(p.x-s*.22,p.y-s*.85,s*.09,s*.42,"#e1b48a");rect(p.x+s*.13,p.y-s*.85,s*.09,s*.42,"#e1b48a");if(!small)text("🪓",p.x+s*.29,p.y-s*.48,Math.max(11,s*.36))}
-// Hand-painted sprite atlas: 6 walk frames in row 0; 4 attack frames in row 1.
-// Every frame is 220x170; the ground line is y=140 (walk) / y=161 (attack).
-const bearWalkSheet=new Image();bearWalkSheet.src="./assets/emberhold-bear-walk-fixed.png?v=2";
-let bearWalkReady=false;bearWalkSheet.onload=()=>{bearWalkReady=bearWalkSheet.naturalWidth===1760&&bearWalkSheet.naturalHeight===170};
-const bearArt=new Image();bearArt.src="./assets/enchanted-bear.png";let bearArtReady=false;bearArt.onload=()=>bearArtReady=true;
+// Clean user-uploaded atlas: 8 walk frames and 8 attack frames, each 440 x 340.
+const bearWalkSheet=new Image();
+let bearWalkReady=false;
+bearWalkSheet.onload=()=>{bearWalkReady=bearWalkSheet.naturalWidth===3520&&bearWalkSheet.naturalHeight===680};
+bearWalkSheet.onerror=()=>console.warn("Bear atlas could not be loaded");
+bearWalkSheet.src="./assets/emberhold-baer-laufen-angreifen.png?v=1";
 function bear(b){
- const p=screen(b.x,b.y),s=scale,walking=b.moving&&b.attack<=0;
- const phase=(b.walkTime||0)*1.55,attackProgress=b.attack>0?1-Math.min(1,b.attack/.55):0;
+ const p=screen(b.x,b.y),s=scale;
  ctx.save();ctx.translate(p.x,p.y);ctx.scale(b.facing||1,1);
- // A contact shadow remains fixed on the ground, independent of the bear's motion.
- ellipse(0,s*.025,s*.82,s*.14,"#14231965");
+ ellipse(0,s*.025,s*.79,s*.14,"#14231965");
  if(bearWalkReady){
-  const cell=220,sw=220,sh=170,bodyW=s*2.02,bodyH=bodyW*170/220;
-  // All animation samples are taken from a single complete, painted bear.
-  // The torso never jumps between unrelated AI-generated bear faces.
-  const sx=4*cell,foot=164;
-  const gait=walking?Math.sin(phase):0;
-  const bodySway=walking?Math.sin(phase*2)*s*.011:0;
-  const bodyPitch=walking?Math.sin(phase)*.012:0;
-  ctx.save();ctx.translate(0,bodySway);ctx.rotate(bodyPitch);
-  // Articulated forelegs and hindlegs: mask and displace only the leg regions.
-  // The full painted body is drawn underneath, so no limb gaps can appear.
-  ctx.drawImage(bearWalkSheet,sx,0,sw,sh,-bodyW/2,-foot*bodyH/sh,bodyW,bodyH);
-  if(walking){
-   const clipLeg=(srcX,srcY,srcW,srcH,dstX,dstY,dstW,dstH,offset)=>{
-    ctx.save();ctx.beginPath();ctx.rect(dstX-s*.045,dstY-s*.03,dstW+s*.09,dstH+s*.05);ctx.clip();
-    ctx.translate(offset*s*.075,-Math.max(0,offset)*s*.025);
-    ctx.drawImage(bearWalkSheet,sx+srcX,srcY,srcW,srcH,dstX,dstY,dstW,dstH);
-    ctx.restore();
-   };
-   clipLeg(48,107,42,55,-bodyW*.27,-bodyH*.34,bodyW*.19,bodyH*.33,-gait);
-   clipLeg(134,102,44,61,bodyW*.13,-bodyH*.38,bodyW*.20,bodyH*.37,gait);
-  }
-  ctx.restore();
-  if(b.attack>0){
-   // The whole bear lunges; the strike is drawn using the original painted
-   // forepaw, never another bear from an adjacent sprite cell.
-   const swing=Math.sin(attackProgress*Math.PI),dx=swing*s*.14;
-   ctx.save();ctx.translate(s*.55,-s*.68);ctx.rotate(-swing*.72);
-   ctx.drawImage(bearWalkSheet,sx+136,96,45,65,-s*.10,-s*.31,s*.40,s*.58);
-   ctx.restore();
-   ctx.strokeStyle="rgba(250,221,166,"+(.45*swing)+")";ctx.lineWidth=s*.025;
-   for(let k=0;k<3;k++){ctx.beginPath();ctx.arc(s*.88,-s*.66+k*s*.13,s*.22,-1.2+swing*.3,.2+swing*.5);ctx.stroke()}
-  }
-  ctx.restore();return;
+  const attacking=b.attack>0;
+  const progress=attacking?Math.max(0,Math.min(.999,1-b.attack/.55)):0;
+  const frame=attacking?Math.floor(progress*8):(b.moving?Math.floor((b.walkTime||0)*1.55)%8:0);
+  const cellW=440,cellH=340;
+  const drawW=s*2.18,drawH=drawW*cellH/cellW;
+  // Each sprite is a complete isolated frame; never overlay or reassemble paws.
+  ctx.drawImage(bearWalkSheet,frame*cellW,attacking?cellH:0,cellW,cellH,-drawW/2,-drawH+drawH*.025,drawW,drawH);
+ }else{
+  // Visible fallback while the atlas is loading.
+  ellipse(0,-s*.65,s*.75,s*.45,"#765039");
+  ellipse(s*.58,-s*.85,s*.28,s*.28,"#956b4a");
  }
- // Detailed painted asset is required; fallback only when image has not loaded.
  ctx.restore();
 }
 function terrainHash(x,y,k=0){let v=Math.sin(x*127.1+y*311.7+k*74.7)*43758.5453;return v-Math.floor(v)}
