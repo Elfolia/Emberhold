@@ -21,7 +21,13 @@ function step(dt){
 elapsed+=dt;state.day=elapsed/135;state.season=Math.floor(elapsed/540)%4;
 weatherTimer-=dt;if(weatherTimer<0){weather=["sun","sun","wind","rain","mist"][Math.floor(rand(0,5))];weatherTimer=rand(30,70)}
 const mv={x:stick.x+(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),y:stick.y+(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0)},ml=Math.hypot(mv.x,mv.y);
-if(ml>.1){hero.x+=mv.x/ml*3.4*dt;hero.y+=mv.y/ml*3.4*dt;hero.dir=mv.x<0?-1:1}
+if(ml>.1){
+ const nx=hero.x+mv.x/ml*3.4*dt,ny=hero.y+mv.y/ml*3.4*dt;
+ // Solid front and side rails: the counter cannot be walked through.
+ const blocked=(nx>1.30&&nx<4.30&&ny>.65&&ny<1.85)||(nx>1.15&&nx<1.52&&ny>-.45&&ny<1.85)||(nx>4.08&&nx<4.48&&ny>-.45&&ny<1.85);
+ if(!blocked){hero.x=nx;hero.y=ny}else{if(!(nx>1.30&&nx<4.30&&hero.y>.65&&hero.y<1.85))hero.x=nx;if(!(hero.x>1.30&&hero.x<4.30&&ny>.65&&ny<1.85))hero.y=ny}
+ hero.dir=mv.x<0?-1:1
+}
 hero.x=clamp(hero.x,-28,28);hero.y=clamp(hero.y,-26,26);hero.hit-=dt;hero.invuln-=dt;
 if(fort(hero.x,hero.y))hero.hp=Math.min(100,hero.hp+12*dt);
 for(const t of trees){if(t.respawn>0){t.respawn-=dt;continue}t.shake=Math.max(0,t.shake-dt);if(distance(hero,t)<1.35&&hero.hit<=0){hero.hit=.58;t.hp--;t.shake=.23;effect(t.x,t.y,"#e4bb70",3);if(t.hp<=0){item(t.x,t.y,"wood",4);t.respawn=19;t.hp=4}}}
@@ -66,7 +72,7 @@ for(let i=drops.length-1;i>=0;i--){let d=drops[i];d.age+=dt;if(distance(hero,d)<
 if(state.hunter){let t=trees.find(t=>t.respawn<=0);if(t){t.auto=(t.auto||0)+dt;if(t.auto>5.5){t.auto=0;t.hp--;t.shake=.2;if(t.hp<=0){item(t.x,t.y,"wood",4);t.hp=4;t.respawn=19}}}let b=bears.find(b=>distance(b,{x:0,y:0})<17);if(b){b.hp-=dt*.22}}
 if(state.carrier){for(let i=drops.length-1;i>=0;i--){let d=drops[i];if(d.age>3&&Math.random()<dt*.45&&stock[d.type]<1000){stock[d.type]++;drops.splice(i,1)}}}
 if(distance(hero,{x:0,y:1})<2.5){for(const type of ["wood","meat"]){let n=Math.min(hero[type],1000-stock[type]);if(n>0){stock[type]+=n;hero[type]-=n}}}
-const atCounter=distance(hero,{x:2.8,y:1})<1.65;
+const atCounter=hero.x>1.15&&hero.x<4.45&&hero.y>-.95&&hero.y<.55;
 if(atCounter||state.seller){sellTimer+=dt;if(sellTimer>=1.4){sellTimer=0;let type=stock.wood>0?"wood":stock.meat>0?"meat":null;if(type){stock[type]--;moneyDrops.push({x:4.5+rand(-.25,.25),y:1+rand(-.25,.25),value:1});customers[0].phase+=1}}}else sellTimer=0;
 for(let i=moneyDrops.length-1;i>=0;i--){if(distance(hero,moneyDrops[i])<1.05){hero.money+=moneyDrops[i].value;moneyDrops.splice(i,1)}}
 if(!state.dress&&stock.wood>=30&&stock.meat>=30&&distance(hero,{x:2.8,y:1})<2.1){stock.wood-=30;stock.meat-=30;state.dress=true;hero.dress=1;say("✨ Ein Händler tauscht 30 Holz und 30 Fleisch gegen ein schönes Nachthemd!")}
@@ -93,6 +99,9 @@ if(treeArtReady){treeGround(t);let h=s*4.25,w=h*treeArt.naturalWidth/treeArt.nat
 ellipse(p.x,p.y+3,s*.55,s*.18,"#253b2877");rect(p.x-s*.13,p.y-s*1.4,s*.26,s*1.4,"#70513a");for(let i=0;i<3;i++){let off=t.shake?Math.sin(elapsed*40)*s*.08:0;ellipse(p.x+off+(i-1)*s*.3,p.y-s*(1.5+i*.3),s*(.72-i*.09),s*(.62-i*.06),["#456a47","#5e8051","#73915b"][i])}}
 function human(x,y,dress=0,small=false){let p=screen(x,y),s=scale*(small?.8:1);ellipse(p.x,p.y,s*.26,s*.1,"#18261d77");poly([[p.x-s*.18,p.y-s*.82],[p.x+s*.18,p.y-s*.82],[p.x+s*.32,p.y-s*.16],[p.x-s*.3,p.y-s*.16]],dress?"#d7bfa2":"#a8957d");rect(p.x-s*.12,p.y-s*.18,s*.09,s*.21,"#6e5546");rect(p.x+s*.07,p.y-s*.18,s*.09,s*.21,"#6e5546");ellipse(p.x,p.y-s*1.03,s*.2,s*.26,"#e1b48a");ellipse(p.x-s*.045,p.y-s*1.18,s*.24,s*.19,"#8b6a3e");rect(p.x-s*.22,p.y-s*.85,s*.09,s*.42,"#e1b48a");rect(p.x+s*.13,p.y-s*.85,s*.09,s*.42,"#e1b48a");if(!small)text("🪓",p.x+s*.29,p.y-s*.48,Math.max(11,s*.36))}
 // Clean user-uploaded atlas: 8 walk frames and 8 attack frames, each 440 x 340.
+const counterArt=new Image();let counterArtReady=false;
+counterArt.onload=()=>counterArtReady=true;
+counterArt.src="./assets/emberhold-verkaufstresen.png?v=1";
 const bearWalkSheet=new Image();
 let bearWalkReady=false;
 bearWalkSheet.onload=()=>{bearWalkReady=bearWalkSheet.naturalWidth===3520&&bearWalkSheet.naturalHeight===680};
@@ -153,13 +162,18 @@ let a=screen(-6.5,-5.9),b=screen(6.5,6.2);rect(a.x,a.y,b.x-a.x,b.y-a.y,"#a58b635
 for(let y=-4;y<6;y+=1.4)for(let x=-5;x<6;x+=1.5){let p=screen(x,y);ellipse(p.x,p.y,scale*.2,scale*.08,"#8b775339")}
 for(let x=-6;x<=6;x+=.65){if(Math.abs(x)>1.2)log(x,5.5,1.9);log(x,-5.5,1.9)}
 for(let y=-4.9;y<=5;y+=.65){log(-6.1,y,1.9);log(6.1,y,1.9)}
-let p=screen(2.8,1);rect(p.x-scale*1.3,p.y-scale*.6,scale*2.6,scale*.85,"#664735");rect(p.x-scale*1.4,p.y-scale*.69,scale*2.8,scale*.2,"#b08a57");rect(p.x-scale*1.25,p.y-scale*1.5,scale*.15,scale*.8,"#765239");rect(p.x+scale*1.1,p.y-scale*1.5,scale*.15,scale*.8,"#765239");poly([[p.x-scale*1.45,p.y-scale*1.5],[p.x,p.y-scale*2.08],[p.x+scale*1.45,p.y-scale*1.5]],"#805944");text("TRESEN",p.x,p.y-scale*1.54,Math.max(9,scale*.24));
+// The illustrated stall is roofless. The inventory remains in its rear storage.
+let p=screen(2.8,1);
 for(let i=0;i<Math.min(stock.wood,25);i++){let q=screen(1.9+(i%5)*.32,.6+Math.floor(i/5)*.16,.52);rect(q.x-5,q.y-4,11,6,"#c19a65");rect(q.x-5,q.y-4,3,6,"#8c613b")}
 for(let i=0;i<Math.min(stock.meat,20);i++){let q=screen(3+(i%5)*.25,.65+Math.floor(i/5)*.14,.5);ellipse(q.x,q.y,scale*.11,scale*.055,"#a4534b")}
 text("🪵"+stock.wood+"  🥩"+stock.meat,p.x,p.y+scale*.53,12);
 let cashP=screen(4.5,1);ellipse(cashP.x,cashP.y,scale*.55,scale*.22,"#d9b35a77");text("💰",cashP.x,cashP.y,20);
 for(const z of zones){if(z.id==="hunter"&&!state.seller||z.id.startsWith("archer")&&!state.hunter||z.id==="carrier"&&state.archers<2)continue;let q=screen(z.x,z.y),done=state.progress[z.id]>=z.cost||(z.id==="seller"&&state.seller)||(z.id==="hunter"&&state.hunter)||(z.id==="carrier"&&state.carrier);ellipse(q.x,q.y,scale*.8,scale*.3,done?"#638c6977":"#d2b36b99");text(done?"✓":z.icon,q.x,q.y,Math.max(14,scale*.44));if(!done)text(z.label+" "+state.progress[z.id]+"/"+z.cost,q.x,q.y+scale*.5,11)}
-let actors=[...trees.filter(t=>t.respawn<=0).map(t=>({y:t.y,draw:()=>tree(t)})),...bears.map(b=>({y:b.y,draw:()=>bear(b)})),{y:hero.y,draw:()=>human(hero.x,hero.y,hero.dress)}];if(state.seller)actors.push({y:1.1,draw:()=>human(2.8,1.1,1,true)});if(state.hunter)actors.push({y:-6.9,draw:()=>human(-4.4,-6.9,1,true)});for(let i=0;i<state.archers;i++)actors.push({y:-5.5,draw:()=>human(i?-5.4:5.4,-5.5,1,true)});if(state.carrier)actors.push({y:-2.9,draw:()=>human(-3.7,-2.9,1,true)});actors.sort((a,b)=>a.y-b.y).forEach(a=>a.draw());
+let actors=[{y:1.7,draw:()=>{
+ const q=screen(2.8,1.65);
+ if(counterArtReady){const w=scale*5.5,h=w*counterArt.naturalHeight/counterArt.naturalWidth;ctx.drawImage(counterArt,q.x-w/2,q.y-h,w,h)}
+ else{rect(q.x-scale*1.5,q.y-scale*.8,scale*3,scale*.9,"#765038");rect(q.x-scale*1.6,q.y-scale*.88,scale*3.2,scale*.16,"#bc9161")}
+ }} ,...trees.filter(t=>t.respawn<=0).map(t=>({y:t.y,draw:()=>tree(t)})),...bears.map(b=>({y:b.y,draw:()=>bear(b)})),{y:hero.y,draw:()=>human(hero.x,hero.y,hero.dress)}];if(state.seller)actors.push({y:.05,draw:()=>human(2.8,.05,1,true)});if(state.hunter)actors.push({y:-6.9,draw:()=>human(-4.4,-6.9,1,true)});for(let i=0;i<state.archers;i++)actors.push({y:-5.5,draw:()=>human(i?-5.4:5.4,-5.5,1,true)});if(state.carrier)actors.push({y:-2.9,draw:()=>human(-3.7,-2.9,1,true)});actors.sort((a,b)=>a.y-b.y).forEach(a=>a.draw());
 for(let i=0;i<customers.length;i++){let c=customers[i];human(2+i*.78,7.2,0,true)}
 for(const d of drops){let p=screen(d.x,d.y);text(d.type==="wood"?"🪵":"🥩",p.x,p.y,Math.max(14,scale*.42))}
 for(const d of moneyDrops){let p=screen(d.x,d.y);text("💵",p.x,p.y,Math.max(12,scale*.34))}
