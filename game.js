@@ -25,6 +25,13 @@ function landscape(x,y){
  const moss=clamp((damp-.34)*1.8)*(1-soil*.65);
  return {damp,open,soil,mud,moss,light,ground};
 }
+// Broad terrain relief: directional sunlight and occlusion follow the same fixed world heightfield.
+function elevation(x,y){return fractal(x/950,y/950,72)*.65+fractal(x/290,y/290,73)*.26+fractal(x/90,y/90,74)*.09}
+function reliefLight(x,y){
+ const left=elevation(x-12,y-12),right=elevation(x+12,y+12);
+ const cross=elevation(x-12,y+12)-elevation(x+12,y-12);
+ return clamp(.98+(left-right)*1.5+cross*.65,.73,1.22);
+}
 function groundColor(f,wx,wy){
  const m=f.moss,s=f.soil,wet=f.mud,lit=f.open;
  let r=mix(56+lit*54,35+lit*30,m*.75),g=mix(85+lit*50,75+lit*44,m*.75),b=mix(42+lit*20,35+lit*17,m*.75);
@@ -32,7 +39,8 @@ function groundColor(f,wx,wy){
  r=mix(r,69,wet*.74);g=mix(g,62,wet*.74);b=mix(b,43,wet*.74);
  const fine=(hash(wx,wy,90)-.5)*17+(noise(wx/15,wy/15,87)-.5)*22;
  const shade=(noise(wx/78,wy/78,88)-.5)*18;
- return [clamp(r+fine+shade,0,255),clamp(g+fine+shade,0,255),clamp(b+fine*.8+shade,0,255)];
+  const sun=reliefLight(wx,wy);\n  const dapples=(fractal(wx/225,wy/225,102)-.5)*28*(1-f.open*.6);
+ return [clamp((r+fine+shade+dapples)*sun,0,255),clamp((g+fine+shade+dapples)*sun,0,255),clamp((b+fine*.8+shade+dapples*.7)*sun,0,255)];
 }
 function grass(g,x,y,rand,size=1){
  const n=5+Math.floor(rand()*6);
@@ -85,6 +93,33 @@ function mud(g,x,y,rand,size=1){
  ellipse(g,x,y,14*size,6*size,"#493e2d82",rand()*.5);
  ellipse(g,x-3*size,y-2*size,6*size,1.3*size,"#b7a17780",-.2);
 }
+// Ground-level raised structures are shaded before the smaller vegetation.
+function paintRelief(g,tx,ty){
+ const CELL=150,MARGIN=100;
+ const x0=Math.floor((tx*TILE-MARGIN)/CELL),x1=Math.ceil(((tx+1)*TILE+MARGIN)/CELL);
+ const y0=Math.floor((ty*TILE-MARGIN)/CELL),y1=Math.ceil(((ty+1)*TILE+MARGIN)/CELL);
+ for(let gy=y0;gy<=y1;gy++)for(let gx=x0;gx<=x1;gx++){
+  const r=rngAt(gx,gy,205),wx=(gx+r())*CELL,wy=(gy+r())*CELL;
+  const x=wx-tx*TILE,y=wy-ty*TILE,f=landscape(wx,wy);
+  if(r()<.45&&f.soil<.56){
+   const rad=22+r()*24;
+   const sh=g.createRadialGradient(x+9,y+9,1,x+9,y+9,rad*1.4);
+   sh.addColorStop(0,"#102f2038");sh.addColorStop(1,"#102f2000");
+   g.fillStyle=sh;g.fillRect(x-rad*1.5,y-rad*1.5,rad*3,rad*3);
+   for(let i=0;i<7;i++){
+    const a=r()*Math.PI*2,d=(.2+r()*.65)*rad,px=x+Math.cos(a)*d,py=y+Math.sin(a)*d;
+    ellipse(g,px,py,5+r()*7,2+r()*3,r()<.5?"#355d3280":"#9eb86d80");
+   }
+  }else if(r()<.21&&f.soil>.36){
+   // Shallow exposed root: offset dark underside and warm illuminated ridge.
+   const length=34+r()*46,angle=(r()-.5)*1.5;
+   g.save();g.translate(x,y);g.rotate(angle);
+   stroke(g,"#2a261c6b",6);g.beginPath();g.moveTo(-length*.5,4);g.quadraticCurveTo(0,-3,length*.5,3);g.stroke();
+   stroke(g,"#866b48",4);g.beginPath();g.moveTo(-length*.5,0);g.quadraticCurveTo(0,-7,length*.5,-1);g.stroke();
+   stroke(g,"#c0a078a0",1.4);g.beginPath();g.moveTo(-length*.5,-1);g.quadraticCurveTo(0,-8,length*.5,-2);g.stroke();g.restore();
+  }
+ }
+}
 function paintDetails(g,tx,ty){
  // Every feature belongs to a global cell, not to the rendering tile.
  // Include a border so features remain intact across tile edges.
@@ -131,7 +166,7 @@ function makeTile(tx,ty){
    p[i]=color[0];p[i+1]=color[1];p[i+2]=color[2];p[i+3]=255;
   }
  }
- g.putImageData(image,0,0);paintDetails(g,tx,ty);return c;
+ g.putImageData(image,0,0);paintRelief(g,tx,ty);paintDetails(g,tx,ty);return c;
 }
 function getTile(x,y){const key=x+","+y;if(cache.has(key)){const t=cache.get(key);cache.delete(key);cache.set(key,t);return t}const t=makeTile(x,y);cache.set(key,t);if(cache.size>MAX_CACHE)cache.delete(cache.keys().next().value);return t}
 function render(){
