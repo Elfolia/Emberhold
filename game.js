@@ -51,7 +51,7 @@ function makeTile(tx,ty){
  // Blend deterministic cropped fragments of the illustrated forest artwork.
  // Neighboring tiles use the same global fragment grid, so edges remain continuous.
  if(paintedGroundReady){
-  const spacing=92,patchSize=150;
+  const spacing=118,patchSize=194;
   const gx0=Math.floor((tx*TILE-patchSize)/spacing),gx1=Math.ceil(((tx+1)*TILE+patchSize)/spacing);
   const gy0=Math.floor((ty*TILE-patchSize)/spacing),gy1=Math.ceil(((ty+1)*TILE+patchSize)/spacing);
   for(let gy=gy0;gy<=gy1;gy++)for(let gx=gx0;gx<=gx1;gx++){
@@ -59,17 +59,17 @@ function makeTile(tx,ty){
    const wx=gx*spacing+(j-.5)*44,wy=gy*spacing+(k-.5)*44;
    const x=wx-tx*TILE,y=wy-ty*TILE;
    const sourceW=paintedGround.naturalWidth,sourceH=paintedGround.naturalHeight;
-   const crop=Math.min(sourceW,sourceH)*.17;
+   const crop=Math.min(sourceW,sourceH)*.12;
    const sx=(hash(gx,gy,93)*(sourceW-crop)),sy=(hash(gx,gy,94)*(sourceH-crop));
-   const size=patchSize*(.82+h*.36);
+   const size=patchSize*(.82+h*.28);
    const stamp=document.createElement("canvas");stamp.width=stamp.height=256;
    const sg=stamp.getContext("2d");sg.drawImage(paintedGround,sx,sy,crop,crop,0,0,256,256);
    sg.globalCompositeOperation="destination-in";
-   const mask=sg.createRadialGradient(128,128,48,128,128,164);
-   mask.addColorStop(0,"rgba(0,0,0,1)");mask.addColorStop(.70,"rgba(0,0,0,.95)");mask.addColorStop(1,"rgba(0,0,0,0)");
+   const mask=sg.createRadialGradient(128,128,70,128,128,172);
+   mask.addColorStop(0,"rgba(0,0,0,1)");mask.addColorStop(.76,"rgba(0,0,0,1)");mask.addColorStop(1,"rgba(0,0,0,0)");
    sg.fillStyle=mask;sg.fillRect(0,0,256,256);
    g.save();g.translate(x,y);g.rotate((hash(gx,gy,95)-.5)*Math.PI*.7);
-   g.drawImage(stamp,-size/2,-size/2,size,size);g.restore();
+   g.imageSmoothingEnabled=true;g.drawImage(stamp,-size/2,-size/2,size,size);g.restore();
   }
  }
  return c;
