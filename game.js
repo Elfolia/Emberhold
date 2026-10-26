@@ -51,13 +51,30 @@ function makeTile(tx,ty){
  return c;
 }
 function tile(tx,ty){const key=tx+","+ty;if(cache.has(key)){const c=cache.get(key);cache.delete(key);cache.set(key,c);return c}const c=makeTile(tx,ty);cache.set(key,c);if(cache.size>MAX_TILES)cache.delete(cache.keys().next().value);return c}
+// The approved illustrated forest-floor artwork is the actual terrain texture.
+// Keep it locked to world coordinates; never randomize or repaint it per frame.
+const paintedGround=new Image();let paintedGroundReady=false;
+paintedGround.onload=()=>{paintedGroundReady=true;render()};
+paintedGround.onerror=()=>{paintedGroundReady=false;render()};
+paintedGround.src="./assets/emberhold-waldboden.webp?v=1";
 function render(){
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle="#527c4c";ctx.fillRect(0,0,W,H);
- // Pixel-aligned camera eliminates fractional seam shimmer when the world moves.
  const ox=Math.round(W/2-camX*zoom),oy=Math.round(H/2-camY*zoom);
+ if(paintedGroundReady){
+  const size=768*zoom;
+  const x0=Math.floor(-ox/size),x1=Math.ceil((W-ox)/size);
+  const y0=Math.floor(-oy/size),y1=Math.ceil((H-oy)/size);
+  ctx.imageSmoothingEnabled=true;
+  for(let ty=y0;ty<=y1;ty++)for(let tx=x0;tx<=x1;tx++){
+   const x=Math.round(ox+tx*size),y=Math.round(oy+ty*size);
+   const x2=Math.round(ox+(tx+1)*size),y2=Math.round(oy+(ty+1)*size);
+   ctx.drawImage(paintedGround,x,y,x2-x+1,y2-y+1);
+  }
+  return;
+ }
+ // Temporary ground fallback while the image file is being uploaded.
  const x0=Math.floor((-ox/zoom)/TILE),x1=Math.floor(((W-ox)/zoom)/TILE);
  const y0=Math.floor((-oy/zoom)/TILE),y1=Math.floor(((H-oy)/zoom)/TILE);
- ctx.imageSmoothingEnabled=true;
  for(let ty=y0;ty<=y1;ty++)for(let tx=x0;tx<=x1;tx++){
   const dx=Math.round(ox+tx*TILE*zoom),dy=Math.round(oy+ty*TILE*zoom);
   const dx2=Math.round(ox+(tx+1)*TILE*zoom),dy2=Math.round(oy+(ty+1)*TILE*zoom);
