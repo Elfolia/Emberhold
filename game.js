@@ -98,36 +98,47 @@ const bearWalkSheet=new Image();bearWalkSheet.src="./assets/emberhold-bear-walk-
 let bearWalkReady=false;bearWalkSheet.onload=()=>{bearWalkReady=bearWalkSheet.naturalWidth===1760&&bearWalkSheet.naturalHeight===170};
 const bearArt=new Image();bearArt.src="./assets/enchanted-bear.png";let bearArtReady=false;bearArt.onload=()=>bearArtReady=true;
 function bear(b){
- const p=screen(b.x,b.y),s=scale;
+ const p=screen(b.x,b.y),s=scale,walking=b.moving&&b.attack<=0;
+ const phase=(b.walkTime||0)*1.55,attackProgress=b.attack>0?1-Math.min(1,b.attack/.55):0;
  ctx.save();ctx.translate(p.x,p.y);ctx.scale(b.facing||1,1);
- const moving=b.moving&&b.attack<=0,phase=(b.walkTime||0)*1.5;
- const hit=b.attack>0?Math.sin(Math.PI*Math.max(0,Math.min(1,1-b.attack/.55))):0;
- ctx.translate(0,moving?Math.sin(phase*2)*s*.009:0);
- ellipse(0,s*.015,s*.87,s*.15,"#14231866");
- function o(x,y,rx,ry,color,rotation=0){ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x*s,y*s,rx*s,ry*s,rotation,0,Math.PI*2);ctx.fill()}
- function leg(x,near,offset){
-  const gait=moving?Math.sin(phase+offset):0,shift=gait*.16,lift=moving?Math.max(0,gait)*.09:0;
-  const c=near?"#835237":"#54372a";
-  o(x+shift*.25,-.55,.20,.34,c,gait*.13);
-  o(x+shift,-.28-lift,.14,.25,c,gait*.19);
-  o(x+shift+.06,-.09-lift,.19,.09,near?"#69412d":"#4b3126");
-  for(let k=0;k<3;k++)o(x+shift+.16+k*.025,-.07-lift,.014,.022,"#c4a07b");
+ // A contact shadow remains fixed on the ground, independent of the bear's motion.
+ ellipse(0,s*.025,s*.82,s*.14,"#14231965");
+ if(bearWalkReady){
+  const cell=220,sw=220,sh=170,bodyW=s*2.02,bodyH=bodyW*170/220;
+  // All animation samples are taken from a single complete, painted bear.
+  // The torso never jumps between unrelated AI-generated bear faces.
+  const sx=4*cell,foot=164;
+  const gait=walking?Math.sin(phase):0;
+  const bodySway=walking?Math.sin(phase*2)*s*.011:0;
+  const bodyPitch=walking?Math.sin(phase)*.012:0;
+  ctx.save();ctx.translate(0,bodySway);ctx.rotate(bodyPitch);
+  // Articulated forelegs and hindlegs: mask and displace only the leg regions.
+  // The full painted body is drawn underneath, so no limb gaps can appear.
+  ctx.drawImage(bearWalkSheet,sx,0,sw,sh,-bodyW/2,-foot*bodyH/sh,bodyW,bodyH);
+  if(walking){
+   const clipLeg=(srcX,srcY,srcW,srcH,dstX,dstY,dstW,dstH,offset)=>{
+    ctx.save();ctx.beginPath();ctx.rect(dstX-s*.045,dstY-s*.03,dstW+s*.09,dstH+s*.05);ctx.clip();
+    ctx.translate(offset*s*.075,-Math.max(0,offset)*s*.025);
+    ctx.drawImage(bearWalkSheet,sx+srcX,srcY,srcW,srcH,dstX,dstY,dstW,dstH);
+    ctx.restore();
+   };
+   clipLeg(48,107,42,55,-bodyW*.27,-bodyH*.34,bodyW*.19,bodyH*.33,-gait);
+   clipLeg(134,102,44,61,bodyW*.13,-bodyH*.38,bodyW*.20,bodyH*.37,gait);
+  }
+  ctx.restore();
+  if(b.attack>0){
+   // The whole bear lunges; the strike is drawn using the original painted
+   // forepaw, never another bear from an adjacent sprite cell.
+   const swing=Math.sin(attackProgress*Math.PI),dx=swing*s*.14;
+   ctx.save();ctx.translate(s*.55,-s*.68);ctx.rotate(-swing*.72);
+   ctx.drawImage(bearWalkSheet,sx+136,96,45,65,-s*.10,-s*.31,s*.40,s*.58);
+   ctx.restore();
+   ctx.strokeStyle="rgba(250,221,166,"+(.45*swing)+")";ctx.lineWidth=s*.025;
+   for(let k=0;k<3;k++){ctx.beginPath();ctx.arc(s*.88,-s*.66+k*s*.13,s*.22,-1.2+swing*.3,.2+swing*.5);ctx.stroke()}
+  }
+  ctx.restore();return;
  }
- leg(-.56,false,Math.PI);leg(.48,false,0);
- o(-.06,-.91,.91,.52,"#65412f",-.04);
- o(-.08,-1.04,.80,.38,"#85583a",-.04);
- o(.46,-.97,.37,.49,"#9a6945",-.15);
- leg(-.56,true,0);leg(.48,true,Math.PI);
- ctx.save();ctx.translate(hit*s*.09,-hit*s*.09);
- o(.75,-1.20,.33,.31,"#885a3c",-.18);
- o(.56,-1.43,.11,.13,"#5c3b2b");o(.84,-1.45,.11,.13,"#5c3b2b");
- o(.56,-1.43,.053,.065,"#b28a64");o(.84,-1.45,.053,.065,"#b28a64");
- o(.98,-1.09,.25,.16,"#ae815c",-.14);
- o(1.18,-1.09,.11,.07,"#302522");
- o(.87,-1.24,.034,.035,"#1b1a19");o(.88,-1.25,.011,.012,"#f3e6c9");
- if(hit>.12){o(1.03,-.99,.14,.07,"#3c2522");o(1.05,-1.01,.10,.019,"#f0c8a0")}
- ctx.restore();
- if(hit>.05){ctx.save();ctx.translate(.55*s,-.77*s);ctx.rotate(-hit*.88);o(.09,-.17,.17,.34,"#966340",-.2);o(.19,-.43,.19,.11,"#754c34");ctx.restore()}
+ // Detailed painted asset is required; fallback only when image has not loaded.
  ctx.restore();
 }
 function terrainHash(x,y,k=0){let v=Math.sin(x*127.1+y*311.7+k*74.7)*43758.5453;return v-Math.floor(v)}
