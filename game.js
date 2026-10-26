@@ -39,7 +39,7 @@ function groundColor(f,wx,wy,sun){
  r=mix(r,69,wet*.74);g=mix(g,62,wet*.74);b=mix(b,43,wet*.74);
  const fine=(hash(wx,wy,90)-.5)*17+(noise(wx/15,wy/15,87)-.5)*22;
  const shade=(noise(wx/78,wy/78,88)-.5)*18;
-  const sun=reliefLight(wx,wy);\n  const dapples=(fractal(wx/225,wy/225,102)-.5)*28*(1-f.open*.6);
+  const dapples=(fractal(wx/225,wy/225,102)-.5)*28*(1-f.open*.6);
  return [clamp((r+fine+shade+dapples)*sun,0,255),clamp((g+fine+shade+dapples)*sun,0,255),clamp((b+fine*.8+shade+dapples*.7)*sun,0,255)];
 }
 function grass(g,x,y,rand,size=1){
