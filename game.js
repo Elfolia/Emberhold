@@ -97,34 +97,39 @@ function human(x,y,dress=0,small=false){let p=screen(x,y),s=scale*(small?.8:1);e
 const bearWalkSheet=new Image();bearWalkSheet.src="./assets/emberhold-bear-walk-fixed.png?v=2";
 let bearWalkReady=false;bearWalkSheet.onload=()=>{bearWalkReady=bearWalkSheet.naturalWidth===1760&&bearWalkSheet.naturalHeight===170};
 const bearArt=new Image();bearArt.src="./assets/enchanted-bear.png";let bearArtReady=false;bearArt.onload=()=>bearArtReady=true;
-function bear(b){let p=screen(b.x,b.y),s=scale;
-ctx.save();ctx.translate(p.x,p.y);ctx.scale(b.facing||1,1);
-ellipse(0,2,s*.58,s*.17,"#17251a55");
-if(bearWalkReady){
- // Use ONE clean bear cell for all states. The atlas attack row contains parts
- // of adjacent bears; never sample that row or paste stray paw fragments.
- // Only frames 4 and 5 contain complete, unobstructed muzzles; other source frames are cropped.
- const sourceX=(b.moving?(Math.floor((b.walkTime||0)*0.9)%2===0?4:5):4)*220,sourceY=0,groundY=165;
- const w=s*1.85,h=w*170/220;
- const stride=0;
- ctx.save();
- ctx.translate(stride,0);
- ctx.drawImage(bearWalkSheet,sourceX,sourceY,220,170,-w/2,-groundY*h/170,w,h);
- ctx.restore();
- if(b.attack>0){
-  // A small separate swipe effect, not another bear's paw.
-  const progress=1-b.attack/.55;
-  ctx.strokeStyle="rgba(246,220,163,"+(0.65*(1-progress))+")";
-  ctx.lineWidth=Math.max(1,s*.035);ctx.lineCap="round";
-  for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(s*.36,-s*.55+i*s*.13,s*.18, -.9+progress, .65+progress);ctx.stroke()}
+function bear(b){
+ const p=screen(b.x,b.y),s=scale;
+ ctx.save();ctx.translate(p.x,p.y);ctx.scale(b.facing||1,1);
+ const moving=b.moving&&b.attack<=0,phase=(b.walkTime||0)*1.5;
+ const hit=b.attack>0?Math.sin(Math.PI*Math.max(0,Math.min(1,1-b.attack/.55))):0;
+ ctx.translate(0,moving?Math.sin(phase*2)*s*.009:0);
+ ellipse(0,s*.015,s*.87,s*.15,"#14231866");
+ function o(x,y,rx,ry,color,rotation=0){ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x*s,y*s,rx*s,ry*s,rotation,0,Math.PI*2);ctx.fill()}
+ function leg(x,near,offset){
+  const gait=moving?Math.sin(phase+offset):0,shift=gait*.16,lift=moving?Math.max(0,gait)*.09:0;
+  const c=near?"#835237":"#54372a";
+  o(x+shift*.25,-.55,.20,.34,c,gait*.13);
+  o(x+shift,-.28-lift,.14,.25,c,gait*.19);
+  o(x+shift+.06,-.09-lift,.19,.09,near?"#69412d":"#4b3126");
+  for(let k=0;k<3;k++)o(x+shift+.16+k*.025,-.07-lift,.014,.022,"#c4a07b");
  }
- ctx.restore();return;
+ leg(-.56,false,Math.PI);leg(.48,false,0);
+ o(-.06,-.91,.91,.52,"#65412f",-.04);
+ o(-.08,-1.04,.80,.38,"#85583a",-.04);
+ o(.46,-.97,.37,.49,"#9a6945",-.15);
+ leg(-.56,true,0);leg(.48,true,Math.PI);
+ ctx.save();ctx.translate(hit*s*.09,-hit*s*.09);
+ o(.75,-1.20,.33,.31,"#885a3c",-.18);
+ o(.56,-1.43,.11,.13,"#5c3b2b");o(.84,-1.45,.11,.13,"#5c3b2b");
+ o(.56,-1.43,.053,.065,"#b28a64");o(.84,-1.45,.053,.065,"#b28a64");
+ o(.98,-1.09,.25,.16,"#ae815c",-.14);
+ o(1.18,-1.09,.11,.07,"#302522");
+ o(.87,-1.24,.034,.035,"#1b1a19");o(.88,-1.25,.011,.012,"#f3e6c9");
+ if(hit>.12){o(1.03,-.99,.14,.07,"#3c2522");o(1.05,-1.01,.10,.019,"#f0c8a0")}
+ ctx.restore();
+ if(hit>.05){ctx.save();ctx.translate(.55*s,-.77*s);ctx.rotate(-hit*.88);o(.09,-.17,.17,.34,"#966340",-.2);o(.19,-.43,.19,.11,"#754c34");ctx.restore()}
+ ctx.restore();
 }
-if(bearArtReady){let h=s*1.95,w=h*bearArt.naturalWidth/bearArt.naturalHeight;ctx.drawImage(bearArt,-w*.5,-h,w,h);ctx.restore();return}
-ctx.restore();
-ellipse(p.x,p.y-s*.55,s*.59,s*.52,"#70503c");ellipse(p.x,p.y-s*.95,s*.43,s*.37,"#815b42");ellipse(p.x-s*.29,p.y-s*1.24,s*.16,s*.17,"#76513a");ellipse(p.x+s*.29,p.y-s*1.24,s*.16,s*.17,"#76513a");ellipse(p.x,p.y-s*.81,s*.21,s*.16,"#ac8869");ellipse(p.x,p.y-s*.88,s*.07,s*.05,"#392b27")}
-
-// Stable, seeded ground detail outside the fort: patches, contour lines, pebbles and vegetation.
 function terrainHash(x,y,k=0){let v=Math.sin(x*127.1+y*311.7+k*74.7)*43758.5453;return v-Math.floor(v)}
 function terrainHeight(x,y){return Math.sin(x*.37+y*.12)*.24+Math.cos(y*.29-x*.18)*.19+Math.sin(x*.81-y*.61)*.075}
 function paintWildTerrain(){
