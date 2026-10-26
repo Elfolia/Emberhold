@@ -94,7 +94,7 @@ ellipse(p.x,p.y+3,s*.55,s*.18,"#253b2877");rect(p.x-s*.13,p.y-s*1.4,s*.26,s*1.4,
 function human(x,y,dress=0,small=false){let p=screen(x,y),s=scale*(small?.8:1);ellipse(p.x,p.y,s*.26,s*.1,"#18261d77");poly([[p.x-s*.18,p.y-s*.82],[p.x+s*.18,p.y-s*.82],[p.x+s*.32,p.y-s*.16],[p.x-s*.3,p.y-s*.16]],dress?"#d7bfa2":"#a8957d");rect(p.x-s*.12,p.y-s*.18,s*.09,s*.21,"#6e5546");rect(p.x+s*.07,p.y-s*.18,s*.09,s*.21,"#6e5546");ellipse(p.x,p.y-s*1.03,s*.2,s*.26,"#e1b48a");ellipse(p.x-s*.045,p.y-s*1.18,s*.24,s*.19,"#8b6a3e");rect(p.x-s*.22,p.y-s*.85,s*.09,s*.42,"#e1b48a");rect(p.x+s*.13,p.y-s*.85,s*.09,s*.42,"#e1b48a");if(!small)text("🪓",p.x+s*.29,p.y-s*.48,Math.max(11,s*.36))}
 // Hand-painted sprite atlas: 6 walk frames in row 0; 4 attack frames in row 1.
 // Every frame is 220x170; the ground line is y=140 (walk) / y=161 (attack).
-const bearWalkSheet=new Image();bearWalkSheet.src="./assets/emberhold-bear-walk-fixed.png?v=1";
+const bearWalkSheet=new Image();bearWalkSheet.src="./assets/emberhold-bear-walk-fixed.png?v=2";
 let bearWalkReady=false;bearWalkSheet.onload=()=>{bearWalkReady=bearWalkSheet.naturalWidth===1760&&bearWalkSheet.naturalHeight===170};
 const bearArt=new Image();bearArt.src="./assets/enchanted-bear.png";let bearArtReady=false;bearArt.onload=()=>bearArtReady=true;
 function bear(b){let p=screen(b.x,b.y),s=scale;
@@ -103,8 +103,8 @@ ellipse(0,2,s*.58,s*.17,"#17251a55");
 if(bearWalkReady){
  // Use ONE clean bear cell for all states. The atlas attack row contains parts
  // of adjacent bears; never sample that row or paste stray paw fragments.
- const sourceX=(b.moving?Math.floor((b.walkTime||0)*1.7)%8:0)*220,sourceY=0,groundY=140;
- const w=s*2.15,h=w*170/220;
+ const sourceX=(b.moving?Math.floor((b.walkTime||0)*1.7)%8:0)*220,sourceY=0,groundY=165;
+ const w=s*1.85,h=w*170/220;
  const stride=0;
  ctx.save();
  ctx.translate(stride,0);
