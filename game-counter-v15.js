@@ -195,40 +195,73 @@ function drawCounter(){
  const g=counterCtx;
  g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,counterCanvas.width,counterCanvas.height);
  g.setTransform(dpr,0,0,dpr,0,0);
- const ox=W/2-camX*zoom,oy=H/2-camY*zoom;
- g.save();g.translate(ox,oy);g.scale(zoom,zoom);
- if(175*zoom<1){g.restore();return}
- const poly=(points,fill,outline,width=1)=>{g.beginPath();g.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)g.lineTo(points[i][0],points[i][1]);g.closePath();g.fillStyle=fill;g.fill();if(outline){g.strokeStyle=outline;g.lineWidth=width;g.stroke()}};
- const line=(pts,color,width)=>{g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.strokeStyle=color;g.lineWidth=width;g.lineCap="round";g.stroke()};
- // Soft grounded shadow and walkable wood platform (rear entrance stays open).
- ellipse(g,4,24,157,112,"#152c1d64");
- poly([[-138,-95],[122,-95],[154,95],[-154,95]],"#54412d","#2d3228",5);
- poly([[-132,-91],[116,-91],[146,87],[-146,87]],"#9c7950","#c6a071",2);
- for(let j=0;j<10;j++){
-  const y=-86+j*18;line([[-134+j*.5,y],[123+j*2,y]],j%2?"#5d4c35":"#6b543a",2.5);
-  line([[-130,y+3],[120,y+3]],"#d3ad74a0",1);
+ g.save();g.translate(W/2-camX*zoom,H/2-camY*zoom);g.scale(zoom,zoom);
+ const path=(pts,fill,stroke,width=1)=>{g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.closePath();g.fillStyle=fill;g.fill();if(stroke){g.strokeStyle=stroke;g.lineWidth=width;g.stroke()}};
+ const line=(pts,color,width)=>{g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.lineWidth=width;g.strokeStyle=color;g.lineCap="round";g.stroke()};
+ // An inviting rustic forest trading counter, not a box-shaped kiosk.
+ // Keep the open inner floor accessible from the back.
+ ellipse(g,0,25,150,95,"#192b1c4b");
+ path([[-116,-79],[111,-79],[138,70],[-137,70]],"#624b32","#473727",3);
+ path([[-109,-76],[105,-76],[128,63],[-128,63]],"#a78558","#d1af7b",1.5);
+ for(let i=0;i<8;i++){
+  const y=-68+i*18;line([[-112+i*.7,y],[111+i*1.8,y]],"#6c523a88",1.8);
+  line([[-103+i*.4,y+3],[99+i*1.4,y+3]],"#d5b27a66",1);
  }
- // Raised counter runs left, front and right, enclosing a clear walkable workspace.
- poly([[-148,-74],[-111,-77],[-108,51],[-148,68]],"#493225","#291f1b",3);
- poly([[113,-77],[148,-71],[151,67],[109,51]],"#493225","#291f1b",3);
- poly([[-147,53],[149,53],[159,90],[-158,90]],"#513522","#2c211b",4);
- // Carved vertical panels facing the viewer.
- for(let x=-137;x<148;x+=29){poly([[x,63],[x+24,63],[x+25,84],[x,84]],x%2?"#715034":"#785638","#3b2a21",1.4);line([[x+4,67],[x+20,67]],"#b18a56",1.3)}
- // Countertop: broad warm wood, highlighted bevels, crisp hand-painted edges.
- poly([[-157,46],[156,46],[167,61],[-167,61]],"#c69b64","#3c2a21",3);
- poly([[-158,45],[-115,35],[-110,-73],[-151,-78]],"#bd925c","#463323",3);
- poly([[110,-73],[151,-76],[158,45],[113,36]],"#bd925c","#463323",3);
- line([[-155,48],[155,48]],"#f0cb88",2.2);
- line([[-150,-72],[-148,40]],"#ebc17f",2);
- line([[146,-72],[153,41]],"#e2b677",2);
- // Visible joinery and gentle worn wood grain.
- for(let j=0;j<7;j++){
-  const x=-123+j*39;line([[x,54],[x+13,56]],"#805a39a0",1);
+ // Curved wooden side cabinetry, with an unobstructed workspace between.
+ path([[-142,-60],[-112,-70],[-101,37],[-135,51]],"#6b442d","#392b23",3);
+ path([[111,-70],[140,-61],[137,52],[103,37]],"#6b442d","#392b23",3);
+ for(const side of [-1,1]){
+  g.save();g.scale(side,1);
+  for(let i=0;i<4;i++){
+   const y=-45+i*23;
+   line([[119,y],[127,y+3],[128,y+14]],"#a17a4f",2);
+   line([[120,y+5],[123,y+6]],"#e4bd7d88",1);
+  }
+  g.restore();
  }
- for(const x of [-143,143]){ellipse(g,x,54,2.4,2.4,"#473528");ellipse(g,x,54,1,1,"#e2bf83")}
- // A little counter sign integrated into the furniture, not an external prop.
- poly([[-43,67],[43,67],[40,83],[-40,83]],"#3e5138","#d0ae77",1.6);
- g.fillStyle="#e5d5a4";g.font="bold 10px Georgia,serif";g.textAlign="center";g.fillText("EMBERHOLD",0,79);
+ // Deep carved front: soft bowed silhouette, warm highlights and hand-shaped beams.
+ g.beginPath();g.moveTo(-140,42);g.quadraticCurveTo(0,51,140,42);g.lineTo(145,80);
+ g.quadraticCurveTo(0,93,-145,80);g.closePath();g.fillStyle="#67442c";g.fill();
+ g.strokeStyle="#39291e";g.lineWidth=3;g.stroke();
+ for(let i=-4;i<=4;i++){
+  const x=i*28;
+  line([[x,57],[x-2,77]],"#422e22a8",2);
+  line([[x+5,59],[x+4,75]],"#b78a54aa",1.2);
+ }
+ // Distinctive scalloped wood apron with little carved leaf motifs.
+ for(let i=-4;i<=4;i++){
+  const x=i*29;
+  ellipse(g,x,68,7,3.5,"#9c7144");
+  line([[x-4,68],[x+3,68]],"#dfb77d",1);
+ }
+ // Curving solid-wood counter surface, subtle grain and brighter bevel.
+ g.beginPath();g.moveTo(-149,36);g.quadraticCurveTo(0,46,149,36);
+ g.quadraticCurveTo(157,41,153,53);g.quadraticCurveTo(0,66,-153,53);
+ g.quadraticCurveTo(-157,42,-149,36);g.closePath();
+ g.fillStyle="#bc8c57";g.fill();g.strokeStyle="#4c3424";g.lineWidth=2.5;g.stroke();
+ g.beginPath();g.moveTo(-147,40);g.quadraticCurveTo(0,50,147,40);
+ g.strokeStyle="#f0ca8d";g.lineWidth=2;g.stroke();
+ // Narrower side tops preserve the visibly walkable open center.
+ path([[-149,35],[-116,31],[-109,-72],[-137,-66]],"#bc8e59","#513a2a",2.5);
+ path([[115,31],[149,35],[138,-66],[109,-72]],"#bc8e59","#513a2a",2.5);
+ line([[-140,-62],[-145,31]],"#ebc38a",1.8);
+ line([[135,-62],[145,31]],"#ebc38a",1.8);
+ for(let i=0;i<5;i++){
+  const y=-52+i*17;
+  line([[-134,y],[-127,y+3]],"#79583a99",1.2);
+  line([[126,y],[135,y+2]],"#79583a99",1.2);
+ }
+ // Small understated woodland engraving, rather than a large flat sign.
+ g.fillStyle="#e3c591";g.font="italic 12px Georgia,serif";g.textAlign="center";
+ g.fillText("Emberhold",0,79);
+ // Tiny leafy carvings at the corners, part of the furniture itself.
+ for(const side of [-1,1]){
+  g.save();g.translate(side*125,62);g.scale(side,1);
+  line([[0,13],[4,0]],"#405638",2);
+  ellipse(g,1,3,5,2.5,"#66834a",-.6);
+  ellipse(g,5,9,5,2.5,"#8b9f60",.5);
+  g.restore();
+ }
  g.restore();
 }
 function render(){
