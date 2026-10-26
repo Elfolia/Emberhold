@@ -54,14 +54,14 @@ function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h)}
 function poly(points,c){ctx.fillStyle=c;ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill()}
 function text(s,x,y,size=13,color="#fff2d2"){ctx.fillStyle=color;ctx.font="bold "+size+"px Georgia";ctx.textAlign="center";ctx.shadowColor="#18241e";ctx.shadowBlur=4;ctx.fillText(s,x,y);ctx.shadowBlur=0}
 function log(x,y,h=1.8){let p=screen(x,y);ellipse(p.x,p.y+3,scale*.22,scale*.1,"#17251a55");rect(p.x-scale*.19,p.y-h*scale*.66,scale*.38,h*scale*.66,"#715139");poly([[p.x-scale*.19,p.y-h*scale*.66],[p.x,p.y-h*scale*.82],[p.x+scale*.19,p.y-h*scale*.66]],"#a07a53");rect(p.x-scale*.08,p.y-h*scale*.65,scale*.07,h*scale*.55,"#aa825a")}
-const treeArt=new Image();treeArt.src="./assets/enchanted-tree.webp";let treeArtReady=false;treeArt.onload=()=>treeArtReady=true;
+const treeArt=new Image();treeArt.src="./assets/enchanted-tree.webp?v=3";let treeArtReady=false;treeArt.onload=()=>treeArtReady=true;
 function tree(t){if(t.respawn>0)return;let p=screen(t.x,t.y),s=scale;
 if(treeArtReady){treeGround(t);let h=s*4.25,w=h*treeArt.naturalWidth/treeArt.naturalHeight;ctx.save();if(t.shake)ctx.translate(Math.sin(elapsed*40)*s*.045,0);ctx.drawImage(treeArt,p.x-w*.5,p.y-h*.95,w,h);ctx.restore();return}
 ellipse(p.x,p.y+3,s*.55,s*.18,"#253b2877");rect(p.x-s*.13,p.y-s*1.4,s*.26,s*1.4,"#70513a");for(let i=0;i<3;i++){let off=t.shake?Math.sin(elapsed*40)*s*.08:0;ellipse(p.x+off+(i-1)*s*.3,p.y-s*(1.5+i*.3),s*(.72-i*.09),s*(.62-i*.06),["#456a47","#5e8051","#73915b"][i])}}
 function human(x,y,dress=0,small=false){let p=screen(x,y),s=scale*(small?.8:1);ellipse(p.x,p.y,s*.26,s*.1,"#18261d77");poly([[p.x-s*.18,p.y-s*.82],[p.x+s*.18,p.y-s*.82],[p.x+s*.32,p.y-s*.16],[p.x-s*.3,p.y-s*.16]],dress?"#d7bfa2":"#a8957d");rect(p.x-s*.12,p.y-s*.18,s*.09,s*.21,"#6e5546");rect(p.x+s*.07,p.y-s*.18,s*.09,s*.21,"#6e5546");ellipse(p.x,p.y-s*1.03,s*.2,s*.26,"#e1b48a");ellipse(p.x-s*.045,p.y-s*1.18,s*.24,s*.19,"#8b6a3e");rect(p.x-s*.22,p.y-s*.85,s*.09,s*.42,"#e1b48a");rect(p.x+s*.13,p.y-s*.85,s*.09,s*.42,"#e1b48a");if(!small)text("🪓",p.x+s*.29,p.y-s*.48,Math.max(11,s*.36))}
 // Hand-painted sprite atlas: 6 walk frames in row 0; 4 attack frames in row 1.
 // Every frame is 220x170; the ground line is y=140 (walk) / y=161 (attack).
-const bearWalkSheet=new Image();bearWalkSheet.src="./assets/bear-animations.png";
+const bearWalkSheet=new Image();bearWalkSheet.src="./assets/bear-animations.png?v=3";
 let bearWalkReady=false;bearWalkSheet.onload=()=>{bearWalkReady=bearWalkSheet.naturalWidth===1320&&bearWalkSheet.naturalHeight===340};
 const bearArt=new Image();bearArt.src="./assets/enchanted-bear.png";let bearArtReady=false;bearArt.onload=()=>bearArtReady=true;
 function bear(b){let p=screen(b.x,b.y),s=scale;
@@ -70,11 +70,18 @@ ellipse(0,2,s*.58,s*.17,"#17251a55");
 if(bearWalkReady){
  const attacking=b.attack>0;
  // The first atlas cells clip the bear's muzzle. Only use intact, fully framed poses.
- const frame=attacking?(b.attack>.275?2:3):b.moving?(Math.floor((b.walkTime||0))%2?4:5):5;
+ // The original atlas contains clipped frames. Frame 5 is the fully visible walking bear.
+ const frame=attacking?3:5;
  const sourceX=frame*220,sourceY=attacking?170:0,groundY=attacking?161:140;
  const w=s*2.15,h=w*170/220;
  // Fixed foot anchor: sprite frames advance but feet never float off the terrain.
+ // The feet remain anchored. Subtle gait uses separate foot motion rather than floating the whole sprite.
  ctx.drawImage(bearWalkSheet,sourceX,sourceY,220,170,-w/2,-groundY*h/170,w,h);
+ if(!attacking&&b.moving){
+  const gait=Math.sin((b.walkTime||0)*Math.PI*2/6),footW=w*.17,footH=h*.18;
+  // Foreground paw from the same painted bear, translated in the walking direction.
+  ctx.drawImage(bearWalkSheet,sourceX+98,sourceY+117,37,30,-w*.065+gait*w*.055,-h*.16+Math.max(0,gait)*h*.035,footW,footH);
+ }
  ctx.restore();return;
 }
 if(bearArtReady){let h=s*1.95,w=h*bearArt.naturalWidth/bearArt.naturalHeight;ctx.drawImage(bearArt,-w*.5,-h,w,h);ctx.restore();return}
@@ -87,6 +94,12 @@ function terrainHeight(x,y){return Math.sin(x*.37+y*.12)*.24+Math.cos(y*.29-x*.1
 function paintWildTerrain(){
  const left=Math.floor(camX-18),right=Math.ceil(camX+18),top=Math.floor(camY-27),bottom=Math.ceil(camY+27);
  ctx.save();
+ // Broad overlapping color washes make the ground visibly varied even on a small iPad screen.
+ for(let x=left-2;x<=right+2;x+=5.1)for(let y=top-2;y<=bottom+2;y+=5.1){
+  if(fort(x,y))continue;
+  const q=screen(x,y),h=terrainHeight(x,y),n=terrainHash(Math.floor(x*4),Math.floor(y*4),6);
+  ellipse(q.x,q.y,scale*(2.3+n*.8),scale*(.75+Math.abs(h)*.8),h>.13?"#b9a16c50":h<-.13?"#395d4d5c":"#56774b55");
+ }
  for(let x=left;x<=right;x+=1.7)for(let y=top;y<=bottom;y+=1.7){
   if(fort(x,y)||fort(x+1.7,y+1.7))continue;
   const seed=terrainHash(Math.floor(x*10),Math.floor(y*10)),h=terrainHeight(x,y),p=screen(x,y);
@@ -163,5 +176,5 @@ function startMusic(){
 $("sound").onclick=()=>{muted=!muted;$("sound").textContent=muted?"🔇 Ton":"🔊 Musik";if(!muted)startMusic();else if(audio)audio.suspend()};
 
 function frame(t){let dt=Math.min(.045,(t-last)/1000||.016);last=t;step(dt);render();requestAnimationFrame(frame)}
-$("play").onclick=()=>{$("start").style.display="none";last=performance.now();requestAnimationFrame(frame)};addEventListener("resize",resize);addEventListener("pagehide",save);resize();init();render();
+$("play").onclick=()=>{$("start").style.display="none";muted=false;$("sound").textContent="🔊 Musik";try{startMusic()}catch(e){console.warn("Audio unavailable",e)}last=performance.now();requestAnimationFrame(frame)};addEventListener("resize",resize);addEventListener("pagehide",save);resize();init();render();
 })();
