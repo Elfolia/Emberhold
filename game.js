@@ -103,7 +103,8 @@ ellipse(0,2,s*.58,s*.17,"#17251a55");
 if(bearWalkReady){
  // Use ONE clean bear cell for all states. The atlas attack row contains parts
  // of adjacent bears; never sample that row or paste stray paw fragments.
- const sourceX=(b.moving?Math.floor((b.walkTime||0)*1.7)%8:0)*220,sourceY=0,groundY=165;
+ // Only frames 4 and 5 contain complete, unobstructed muzzles; other source frames are cropped.
+ const sourceX=(b.moving?(Math.floor((b.walkTime||0)*0.9)%2===0?4:5):4)*220,sourceY=0,groundY=165;
  const w=s*1.85,h=w*170/220;
  const stride=0;
  ctx.save();
