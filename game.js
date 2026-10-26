@@ -48,31 +48,43 @@ function makeTile(tx,ty){
    for(let j=0;j<5;j++)oval(g,x+(rng()-.5)*13,y+(rng()-.5)*8,1+rng()*3,1+rng()*2,"#9aaf5b77");
   }
  }
+ // Blend deterministic cropped fragments of the illustrated forest artwork.
+ // Neighboring tiles use the same global fragment grid, so edges remain continuous.
+ if(paintedGroundReady){
+  const spacing=125,patchSize=230;
+  const gx0=Math.floor((tx*TILE-patchSize)/spacing),gx1=Math.ceil(((tx+1)*TILE+patchSize)/spacing);
+  const gy0=Math.floor((ty*TILE-patchSize)/spacing),gy1=Math.ceil(((ty+1)*TILE+patchSize)/spacing);
+  for(let gy=gy0;gy<=gy1;gy++)for(let gx=gx0;gx<=gx1;gx++){
+   const h=hash(gx,gy,90),j=hash(gx,gy,91),k=hash(gx,gy,92);
+   const wx=gx*spacing+(j-.5)*44,wy=gy*spacing+(k-.5)*44;
+   const x=wx-tx*TILE,y=wy-ty*TILE;
+   const sourceW=paintedGround.naturalWidth,sourceH=paintedGround.naturalHeight;
+   const crop=Math.min(sourceW,sourceH)*.27;
+   const sx=(hash(gx,gy,93)*(sourceW-crop)),sy=(hash(gx,gy,94)*(sourceH-crop));
+   const size=patchSize*(.8+h*.55);
+   const stamp=document.createElement("canvas");stamp.width=stamp.height=128;
+   const sg=stamp.getContext("2d");sg.drawImage(paintedGround,sx,sy,crop,crop,0,0,128,128);
+   sg.globalCompositeOperation="destination-in";
+   const mask=sg.createRadialGradient(64,64,17,64,64,89);
+   mask.addColorStop(0,"rgba(0,0,0,.92)");mask.addColorStop(.48,"rgba(0,0,0,.77)");mask.addColorStop(1,"rgba(0,0,0,0)");
+   sg.fillStyle=mask;sg.fillRect(0,0,128,128);
+   g.save();g.translate(x,y);g.rotate((hash(gx,gy,95)-.5)*Math.PI*.7);
+   g.drawImage(stamp,-size/2,-size/2,size,size);g.restore();
+  }
+ }
  return c;
 }
 function tile(tx,ty){const key=tx+","+ty;if(cache.has(key)){const c=cache.get(key);cache.delete(key);cache.set(key,c);return c}const c=makeTile(tx,ty);cache.set(key,c);if(cache.size>MAX_TILES)cache.delete(cache.keys().next().value);return c}
 // The approved illustrated forest-floor artwork is the actual terrain texture.
 // Keep it locked to world coordinates; never randomize or repaint it per frame.
 const paintedGround=new Image();let paintedGroundReady=false;
-paintedGround.onload=()=>{paintedGroundReady=true;render()};
+paintedGround.onload=()=>{paintedGroundReady=true;cache.clear();render()};
 paintedGround.onerror=()=>{paintedGroundReady=false;render()};
 paintedGround.src="./assets/emberhold-waldboden.webp?v=1";
 function render(){
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle="#527c4c";ctx.fillRect(0,0,W,H);
  const ox=Math.round(W/2-camX*zoom),oy=Math.round(H/2-camY*zoom);
- if(paintedGroundReady){
-  const size=768*zoom;
-  const x0=Math.floor(-ox/size),x1=Math.ceil((W-ox)/size);
-  const y0=Math.floor(-oy/size),y1=Math.ceil((H-oy)/size);
-  ctx.imageSmoothingEnabled=true;
-  for(let ty=y0;ty<=y1;ty++)for(let tx=x0;tx<=x1;tx++){
-   const x=Math.round(ox+tx*size),y=Math.round(oy+ty*size);
-   const x2=Math.round(ox+(tx+1)*size),y2=Math.round(oy+(ty+1)*size);
-   ctx.drawImage(paintedGround,x,y,x2-x+1,y2-y+1);
-  }
-  return;
- }
- // Temporary ground fallback while the image file is being uploaded.
+ // Deterministic generated ground, enriched with painted fragments when the asset exists.
  const x0=Math.floor((-ox/zoom)/TILE),x1=Math.floor(((W-ox)/zoom)/TILE);
  const y0=Math.floor((-oy/zoom)/TILE),y1=Math.floor(((H-oy)/zoom)/TILE);
  for(let ty=y0;ty<=y1;ty++)for(let tx=x0;tx<=x1;tx++){
