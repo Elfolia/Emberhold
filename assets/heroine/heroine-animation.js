@@ -15,7 +15,7 @@
  Promise.all(all).then(()=>{ready=Object.values(images).some(a=>a.some(im=>im.naturalWidth>0));});
  const original=drawHeroine;
  drawHeroine=function(now=performance.now()){
-  if(!ready){original(now);return;}
+  if(!ready && !images.idle.some(im=>im.naturalWidth>0))return;
   const age=(now-heroine.attackAt)/1000;
   const attacking=age>=0&&age<.64;
   let kind,index;
@@ -23,7 +23,8 @@
   else if(heroine.move){const vertical=Math.abs(joystick.y)>Math.abs(joystick.x)*1.25;kind=vertical?(joystick.y<0?"walk_back":"walk_front"):"walk_side";index=Math.floor(heroine.walk*3.2)%groups[kind];}
   else {kind="idle";index=0;}
   const im=images[kind][index];
-  if(!im || !im.naturalWidth){original(now);return;}
+  const frame=(im&&im.naturalWidth)?im:images.idle.find(img=>img.naturalWidth>0);
+  if(!frame)return;
   const g=counterCtx;
   g.save();
   g.translate(W/2+(heroine.x-camX)*zoom,H/2+(heroine.y-camY)*zoom);
@@ -31,9 +32,9 @@
   g.scale(zoom*(heroine.dir<0?-1:1),zoom);
   // Keep the complete PNG visible, preserve aspect ratio, and anchor at the feet.
   const maxWidth=112,maxHeight=145;
-  const scale=Math.min(maxWidth/im.naturalWidth,maxHeight/im.naturalHeight);
-  const dw=im.naturalWidth*scale,dh=im.naturalHeight*scale;
-  g.drawImage(im,-dw/2,-dh,dw,dh);
+  const scale=Math.min(maxWidth/frame.naturalWidth,maxHeight/frame.naturalHeight);
+  const dw=frame.naturalWidth*scale,dh=frame.naturalHeight*scale;
+  g.drawImage(frame,-dw/2,-dh,dw,dh);
   g.restore();
  };
 })();
