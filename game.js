@@ -148,6 +148,7 @@ function paintDetails(g,tx,ty){
  const fy0=Math.floor((ty*TILE-25)/FCELL),fy1=Math.ceil(((ty+1)*TILE+25)/FCELL);
  for(let gy=fy0;gy<=fy1;gy++)for(let gx=fx0;gx<=fx1;gx++){
   const r=rngAt(gx,gy,312),wx=(gx+.2+r()*.6)*FCELL,wy=(gy+.2+r()*.6)*FCELL;
+  if(counterZone(wx,wy))continue;
   const f=landscape(wx,wy);
   if(f.open>.42&&f.soil<.42&&f.mud<.15&&r()<.32){
    flower(g,wx-tx*TILE,wy-ty*TILE,r,.45+r()*.35);
@@ -235,6 +236,7 @@ function render(){
   const ex=Math.round(ox+(x+1)*TILE*zoom),ey=Math.round(oy+(y+1)*TILE*zoom);
   ctx.drawImage(getTile(x,y),dx,dy,ex-dx+1,ey-dy+1);
  }
+ drawCounter();
 }
 // Wind lives on a transparent overlay: the expensive ground tiles never redraw for animation.
 const windCanvas=document.createElement("canvas"),windCtx=windCanvas.getContext("2d");
