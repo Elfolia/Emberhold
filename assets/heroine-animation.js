@@ -1,7 +1,7 @@
 // Emberhold heroine animation asset integration.
 // Include AFTER game-heroine-v40.js; all paths relative to the HTML page.
 (()=>{
- const root="assets/heroine/";
+ const root="assets/";
  const groups={walk_side:9,walk_front:7,walk_back:7,attack:4,idle:5};
  const images={};let ready=false;
  const all=[];
