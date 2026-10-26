@@ -187,11 +187,17 @@ function makeTile(tx,ty){
 function getTile(x,y){const key=x+","+y;if(cache.has(key)){const t=cache.get(key);cache.delete(key);cache.set(key,t);return t}const t=makeTile(x,y);cache.set(key,t);if(cache.size>MAX_CACHE)cache.delete(cache.keys().next().value);return t}
 // Hand-drawn, open-backed market counter. The center is a walkable plank floor,
 // with service surfaces only on three sides; no baked-in ground decorations.
+// Counter is rendered on its own foreground canvas, above ground and moving grass.
+const counterCanvas=document.createElement("canvas"),counterCtx=counterCanvas.getContext("2d");
+Object.assign(counterCanvas.style,{position:"fixed",inset:"0",width:"100%",height:"100%",pointerEvents:"none",zIndex:"3"});
+document.body.appendChild(counterCanvas);
 function drawCounter(){
+ const g=counterCtx;
+ g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,counterCanvas.width,counterCanvas.height);
+ g.setTransform(dpr,0,0,dpr,0,0);
  const ox=W/2-camX*zoom,oy=H/2-camY*zoom;
- ctx.save();ctx.translate(ox,oy);ctx.scale(zoom,zoom);
- if(175*zoom<1){ctx.restore();return}
- const g=ctx;
+ g.save();g.translate(ox,oy);g.scale(zoom,zoom);
+ if(175*zoom<1){g.restore();return}
  const poly=(points,fill,outline,width=1)=>{g.beginPath();g.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)g.lineTo(points[i][0],points[i][1]);g.closePath();g.fillStyle=fill;g.fill();if(outline){g.strokeStyle=outline;g.lineWidth=width;g.stroke()}};
  const line=(pts,color,width)=>{g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.strokeStyle=color;g.lineWidth=width;g.lineCap="round";g.stroke()};
  // Soft grounded shadow and walkable wood platform (rear entrance stays open).
@@ -223,7 +229,7 @@ function drawCounter(){
  // A little counter sign integrated into the furniture, not an external prop.
  poly([[-43,67],[43,67],[40,83],[-40,83]],"#3e5138","#d0ae77",1.6);
  g.fillStyle="#e5d5a4";g.font="bold 10px Georgia,serif";g.textAlign="center";g.fillText("EMBERHOLD",0,79);
- ctx.restore();
+ g.restore();
 }
 function render(){
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle="#42693b";ctx.fillRect(0,0,W,H);
@@ -277,7 +283,7 @@ function drawWind(time){
   }
  }
 }
-function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);windCanvas.width=canvas.width;windCanvas.height=canvas.height;windDirty=true;render()}
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);windCanvas.width=canvas.width;windCanvas.height=canvas.height;counterCanvas.width=canvas.width;counterCanvas.height=canvas.height;windDirty=true;render()}
 canvas.addEventListener("pointerdown",e=>{drag={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId)});
 canvas.addEventListener("pointermove",e=>{if(!drag||drag.id!==e.pointerId)return;camX-=(e.clientX-drag.x)/zoom;camY-=(e.clientY-drag.y)/zoom;drag.x=e.clientX;drag.y=e.clientY;windDirty=true;render()});
 canvas.addEventListener("pointerup",()=>drag=null);canvas.addEventListener("pointercancel",()=>drag=null);
