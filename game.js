@@ -14,7 +14,7 @@ function say(t){$("toast").textContent=t;notice=4}
 function save(){try{localStorage.setItem("emberhold-v1",JSON.stringify({hero:{money:hero.money,dress:hero.dress},stock,state,elapsed}))}catch(e){}}
 function load(){try{let s=JSON.parse(localStorage.getItem("emberhold-v1"));if(!s)return false;hero.money=s.hero.money||0;hero.dress=s.hero.dress||0;Object.assign(stock,s.stock||{});Object.assign(state,s.state||{});state.progress=Object.assign({seller:0,hunter:0,archerL:0,archerR:0,carrier:0},state.progress);elapsed=s.elapsed||0;return true}catch(e){return false}}
 function init(){for(let i=0;i<43;i++){let a=i*2.3999,r=8.3+(i%7)*2.5;trees.push({x:Math.cos(a)*r,y:Math.sin(a)*r,hp:4,respawn:0,shake:0})}for(let i=0;i<5;i++)spawnBear();for(let i=0;i<5;i++)customers.push({x:2+i*.85,y:7.3,wait:rand(0,3),phase:rand(0,7)});load();$("play").textContent="Spiel fortsetzen";say("Willkommen in Emberhold. Sammle Holz und Fleisch!")}
-function spawnBear(){let a=rand(0,Math.PI*2),r=rand(9,16);bears.push({x:Math.cos(a)*r,y:Math.sin(a)*r,hp:7,cool:0,wobble:rand(0,6),facing:1,moving:false,attack:0,walkTime:rand(0,1),state:"idle"})}
+function spawnBear(){let a=rand(0,Math.PI*2),r=rand(9,16);bears.push({x:Math.cos(a)*r,y:Math.sin(a)*r,hp:7,cool:0,wobble:rand(0,6),facing:1,moving:false,attack:0,walkTime:rand(0,1),state:"idle",roamTimer:rand(.4,2),roamAngle:rand(0,Math.PI*2),pauseTimer:0,homeX:0,homeY:0})}
 function item(x,y,type,n=1){for(let i=0;i<n;i++)drops.push({x:x+rand(-.65,.65),y:y+rand(-.65,.65),type,age:0})}
 function effect(x,y,color,n=5){for(let i=0;i<n;i++)particles.push({x,y,vx:rand(-2,2),vy:rand(-2,1),life:rand(.3,.8),color})}
 function step(dt){
@@ -25,7 +25,40 @@ if(ml>.1){hero.x+=mv.x/ml*3.4*dt;hero.y+=mv.y/ml*3.4*dt;hero.dir=mv.x<0?-1:1}
 hero.x=clamp(hero.x,-28,28);hero.y=clamp(hero.y,-26,26);hero.hit-=dt;hero.invuln-=dt;
 if(fort(hero.x,hero.y))hero.hp=Math.min(100,hero.hp+12*dt);
 for(const t of trees){if(t.respawn>0){t.respawn-=dt;continue}t.shake=Math.max(0,t.shake-dt);if(distance(hero,t)<1.35&&hero.hit<=0){hero.hit=.58;t.hp--;t.shake=.23;effect(t.x,t.y,"#e4bb70",3);if(t.hp<=0){item(t.x,t.y,"wood",4);t.respawn=19;t.hp=4}}}
-for(const b of bears){b.cool-=dt;b.attack=Math.max(0,(b.attack||0)-dt);b.moving=false;const d=distance(hero,b);if(d<4.2&&!fort(hero.x,hero.y)){const dx=(hero.x-b.x)/Math.max(d,.1),dy=(hero.y-b.y)/Math.max(d,.1);if(d>1.15){b.x+=dx*.7*dt;b.y+=dy*.7*dt;b.facing=dx<0?-1:1;b.moving=true;b.walkTime=(b.walkTime||0)+dt*5.8}}if(fort(b.x,b.y)){b.x*=1+dt*.3;b.y*=1+dt*.3}if(d<1.45&&!fort(hero.x,hero.y)&&b.cool<=0&&hero.invuln<=0){hero.hp-=13;b.cool=1.8;b.attack=.55;hero.invuln=.7;effect(hero.x,hero.y,"#c74435",6);say("Autsch! Zurück ins Fort zum Ausruhen.")}if(d<1.45&&hero.hit<=0){hero.hit=.65;b.hp-=2;effect(b.x,b.y,"#c69a69",4)}if(state.archers&&distance(b,{x:0,y:0})<11){b.hp-=state.archers*.55*dt}}
+for(const b of bears){
+ b.cool-=dt;b.attack=Math.max(0,(b.attack||0)-dt);b.moving=false;
+ const d=distance(hero,b),chasing=d<4.8&&!fort(hero.x,hero.y);
+ let dx=0,dy=0,speed=0;
+ if(chasing){
+  b.state="chase";
+  if(d>1.18){dx=(hero.x-b.x)/Math.max(d,.1);dy=(hero.y-b.y)/Math.max(d,.1);speed=.95}
+ }else{
+  // Wild bears roam independently, pause to sniff, and choose new directions.
+  b.roamTimer=(b.roamTimer||0)-dt;
+  if(b.roamTimer<=0){
+   b.roamTimer=rand(1.4,4.8);
+   b.roamAngle=rand(-Math.PI,Math.PI);
+   b.state=Math.random()<.27?"rest":"wander";
+  }
+  if(b.state==="wander"){
+   dx=Math.cos(b.roamAngle);dy=Math.sin(b.roamAngle);speed=.38;
+   // Keep bears in the forest around the fort, not on the sales counter.
+   const radius=Math.hypot(b.x,b.y);
+   if(radius>19||radius<8){const desired=radius>19?Math.atan2(-b.y,-b.x):Math.atan2(b.y,b.x);b.roamAngle=desired;dx=Math.cos(desired);dy=Math.sin(desired)}
+  }
+ }
+ if(speed>0&&b.attack<=0){
+  const nx=clamp(b.x+dx*speed*dt,-25,25),ny=clamp(b.y+dy*speed*dt,-24,24);
+  if(!fort(nx,ny)){b.x=nx;b.y=ny;b.moving=true;b.walkTime=(b.walkTime||0)+dt*4.5;b.facing=dx<0?-1:1}
+  else{b.roamTimer=0;b.roamAngle+=Math.PI}
+ }
+ if(d<1.45&&!fort(hero.x,hero.y)&&b.cool<=0&&hero.invuln<=0){
+  hero.hp-=13;b.cool=1.8;b.attack=.55;hero.invuln=.7;
+  effect(hero.x,hero.y,"#c74435",6);say("Autsch! Zurück ins Fort zum Ausruhen.")
+ }
+ if(d<1.45&&hero.hit<=0){hero.hit=.65;b.hp-=2;effect(b.x,b.y,"#c69a69",4)}
+ if(state.archers&&distance(b,{x:0,y:0})<11)b.hp-=state.archers*.55*dt;
+}
 for(let i=bears.length-1;i>=0;i--)if(bears[i].hp<=0){let b=bears[i];item(b.x,b.y,"meat",5);bears.splice(i,1);effect(b.x,b.y,"#d9b77b",9)}
 if(bears.length<5&&Math.random()<dt*.13)spawnBear();
 if(hero.hp<=0){hero.x=0;hero.y=1;hero.hp=65;say("Du bist im Fort wieder aufgewacht. Deine Waren bleiben erhalten.")}
@@ -68,19 +101,21 @@ function bear(b){let p=screen(b.x,b.y),s=scale;
 ctx.save();ctx.translate(p.x,p.y);ctx.scale(b.facing||1,1);
 ellipse(0,2,s*.58,s*.17,"#17251a55");
 if(bearWalkReady){
- const attacking=b.attack>0;
- // The first atlas cells clip the bear's muzzle. Only use intact, fully framed poses.
- // The original atlas contains clipped frames. Frame 5 is the fully visible walking bear.
- const frame=attacking?3:5;
- const sourceX=frame*220,sourceY=attacking?170:0,groundY=attacking?161:140;
+ // Use ONE clean bear cell for all states. The atlas attack row contains parts
+ // of adjacent bears; never sample that row or paste stray paw fragments.
+ const sourceX=5*220,sourceY=0,groundY=140;
  const w=s*2.15,h=w*170/220;
- // Fixed foot anchor: sprite frames advance but feet never float off the terrain.
- // The feet remain anchored. Subtle gait uses separate foot motion rather than floating the whole sprite.
+ const stride=b.moving?Math.sin((b.walkTime||0)*1.2)*s*.025:0;
+ ctx.save();
+ ctx.translate(stride,0);
  ctx.drawImage(bearWalkSheet,sourceX,sourceY,220,170,-w/2,-groundY*h/170,w,h);
- if(!attacking&&b.moving){
-  const gait=Math.sin((b.walkTime||0)*Math.PI*2/6),footW=w*.17,footH=h*.18;
-  // Foreground paw from the same painted bear, translated in the walking direction.
-  ctx.drawImage(bearWalkSheet,sourceX+98,sourceY+117,37,30,-w*.065+gait*w*.055,-h*.16+Math.max(0,gait)*h*.035,footW,footH);
+ ctx.restore();
+ if(b.attack>0){
+  // A small separate swipe effect, not another bear's paw.
+  const progress=1-b.attack/.55;
+  ctx.strokeStyle="rgba(246,220,163,"+(0.65*(1-progress))+")";
+  ctx.lineWidth=Math.max(1,s*.035);ctx.lineCap="round";
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(s*.36,-s*.55+i*s*.13,s*.18, -.9+progress, .65+progress);ctx.stroke()}
  }
  ctx.restore();return;
 }
