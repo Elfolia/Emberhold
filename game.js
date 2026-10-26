@@ -135,9 +135,21 @@ function paintDetails(g,tx,ty){
   else if(v<.07+(1-f.open)*.05)rock(g,x,y,rand,size);
   else if(f.moss>.46&&v<.36)moss(g,x,y,rand,size);
   else if(f.damp>.47&&v<.35)fern(g,x,y,rand,size);
-  else if(f.open>.5&&f.soil<.32&&v<.15)flower(g,x,y,rand,size);
+  else if(f.open>.46&&f.soil<.38&&v<.19)flower(g,x,y,rand,size);
   else if(f.soil<.65&&v<.82)grass(g,x,y,rand,size);
   else if(v<.65)leaf(g,x,y,rand,size*.75);
+ }
+ // A few extra tiny wildflowers in naturally sunny meadow pockets.
+ // Stable positions and generous spacing keep the forest floor understated.
+ const FCELL=105;
+ const fx0=Math.floor((tx*TILE-25)/FCELL),fx1=Math.ceil(((tx+1)*TILE+25)/FCELL);
+ const fy0=Math.floor((ty*TILE-25)/FCELL),fy1=Math.ceil(((ty+1)*TILE+25)/FCELL);
+ for(let gy=fy0;gy<=fy1;gy++)for(let gx=fx0;gx<=fx1;gx++){
+  const r=rngAt(gx,gy,312),wx=(gx+.2+r()*.6)*FCELL,wy=(gy+.2+r()*.6)*FCELL;
+  const f=landscape(wx,wy);
+  if(f.open>.42&&f.soil<.42&&f.mud<.15&&r()<.32){
+   flower(g,wx-tx*TILE,wy-ty*TILE,r,.45+r()*.35);
+  }
  }
  // Small sharp secondary details, seeded by absolute world cells.
  const S=12;
