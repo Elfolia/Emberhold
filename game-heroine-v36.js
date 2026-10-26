@@ -633,6 +633,6 @@ canvas.addEventListener("pointerup",()=>drag=null);canvas.addEventListener("poin
 canvas.addEventListener("wheel",e=>{e.preventDefault();zoom=clamp(zoom*(e.deltaY>0?.9:1.1),.75,1.5);windDirty=true;render()},{passive:false});
 const keys={};addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 let last=performance.now();function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;heroineTick(dt);if(keys[' ']||keys.f){heroineAttack();keys[' ']=false;keys.f=false}const v=300*dt/zoom;let moved=false;
- if(keys.a||keys.arrowleft){camX-=v;moved=true}if(keys.d||keys.arrowright){camX+=v;moved=true}if(keys.w||keys.arrowup){camY-=v;moved=true}if(keys.s||keys.arrowdown){camY+=v;moved=true}
+ if(keys.a){camX-=v;moved=true}if(keys.d){camX+=v;moved=true}if(keys.w){camY-=v;moved=true}if(keys.s){camY+=v;moved=true}
  if(moved){render()}if(now-lastWindFrame>50){drawWind(now);drawTrees(now);renderForeground(now);lastWindFrame=now}requestAnimationFrame(loop)}
 resize();requestAnimationFrame(loop);
