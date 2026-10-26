@@ -25,9 +25,9 @@ if(ml>.1){
  const nx=hero.x+mv.x/ml*3.4*dt,ny=hero.y+mv.y/ml*3.4*dt;
  // Solid front and side rails: the counter cannot be walked through.
  // Front rail and side panels are solid; the rear interior remains accessible.
- const blockedAt=(x,y)=>(x>1.30&&x<4.30&&y>.65&&y<1.85)||
-  (x>1.15&&x<1.52&&y>-.45&&y<1.85)||
-  (x>4.08&&x<4.48&&y>-.45&&y<1.85);
+ const blockedAt=(x,y)=>(x>1.30&&x<4.30&&y>1.95&&y<3.2)||
+  (x>1.15&&x<1.52&&y>.15&&y<3.2)||
+  (x>4.08&&x<4.48&&y>.15&&y<3.2);
  if(!blockedAt(nx,ny)){hero.x=nx;hero.y=ny}
  else{if(!blockedAt(nx,hero.y))hero.x=nx;if(!blockedAt(hero.x,ny))hero.y=ny}
  hero.dir=mv.x<0?-1:1
@@ -75,11 +75,11 @@ if(hero.hp<=0){hero.x=0;hero.y=1;hero.hp=65;say("Du bist im Fort wieder aufgewac
 for(let i=drops.length-1;i>=0;i--){let d=drops[i];d.age+=dt;if(distance(hero,d)<.85){hero[d.type]++;effect(d.x,d.y,"#f3d58a",2);drops.splice(i,1)}}
 if(state.hunter){let t=trees.find(t=>t.respawn<=0);if(t){t.auto=(t.auto||0)+dt;if(t.auto>5.5){t.auto=0;t.hp--;t.shake=.2;if(t.hp<=0){item(t.x,t.y,"wood",4);t.hp=4;t.respawn=19}}}let b=bears.find(b=>distance(b,{x:0,y:0})<17);if(b){b.hp-=dt*.22}}
 if(state.carrier){for(let i=drops.length-1;i>=0;i--){let d=drops[i];if(d.age>3&&Math.random()<dt*.45&&stock[d.type]<1000){stock[d.type]++;drops.splice(i,1)}}}
-if(distance(hero,{x:0,y:1})<2.5){for(const type of ["wood","meat"]){let n=Math.min(hero[type],1000-stock[type]);if(n>0){stock[type]+=n;hero[type]-=n}}}
-const atCounter=hero.x>1.15&&hero.x<4.45&&hero.y>-.95&&hero.y<.55;
-if(atCounter||state.seller){sellTimer+=dt;if(sellTimer>=1.4){sellTimer=0;let type=stock.wood>0?"wood":stock.meat>0?"meat":null;if(type){stock[type]--;moneyDrops.push({x:4.5+rand(-.25,.25),y:1+rand(-.25,.25),value:1});customers[0].phase+=1}}}else sellTimer=0;
+if(distance(hero,{x:2.8,y:1})<2.2){for(const type of ["wood","meat"]){let n=Math.min(hero[type],1000-stock[type]);if(n>0){stock[type]+=n;hero[type]-=n}}}
+const atCounter=hero.x>1.15&&hero.x<4.45&&hero.y>.2&&hero.y<1.85;
+if(atCounter||state.seller){sellTimer+=dt;if(sellTimer>=1.4){sellTimer=0;let type=stock.wood>0?"wood":stock.meat>0?"meat":null;if(type){stock[type]--;moneyDrops.push({x:4.5+rand(-.25,.25),y:2.8+rand(-.25,.25),value:1});customers[0].phase+=1}}}else sellTimer=0;
 for(let i=moneyDrops.length-1;i>=0;i--){if(distance(hero,moneyDrops[i])<1.05){hero.money+=moneyDrops[i].value;moneyDrops.splice(i,1)}}
-if(!state.dress&&stock.wood>=30&&stock.meat>=30&&distance(hero,{x:2.8,y:1})<2.1){stock.wood-=30;stock.meat-=30;state.dress=true;hero.dress=1;say("✨ Ein Händler tauscht 30 Holz und 30 Fleisch gegen ein schönes Nachthemd!")}
+if(!state.dress&&stock.wood>=30&&stock.meat>=30&&distance(hero,{x:2.8,y:1})<2.0){stock.wood-=30;stock.meat-=30;state.dress=true;hero.dress=1;say("✨ Ein Händler tauscht 30 Holz und 30 Fleisch gegen ein schönes Nachthemd!")}
 for(const z of zones){if((z.id==="seller"&&state.seller)||(z.id==="hunter"&&state.hunter)||(z.id==="carrier"&&state.carrier)||(z.id==="archerL"&&state.progress.archerL>=z.cost)||(z.id==="archerR"&&state.progress.archerR>=z.cost))continue;
 if(z.id==="hunter"&&!state.seller||z.id.startsWith("archer")&&!state.hunter||z.id==="carrier"&&state.archers<2)continue;
 if(distance(hero,z)<1.05&&hero.money>0){let amount=Math.min(hero.money,z.cost-state.progress[z.id],Math.max(1,Math.ceil(dt*35)));state.progress[z.id]+=amount;hero.money-=amount;if(state.progress[z.id]>=z.cost){if(z.id==="seller")state.seller=true;if(z.id==="hunter")state.hunter=true;if(z.id.startsWith("archer"))state.archers++;if(z.id==="carrier")state.carrier=true;say("✨ "+z.label+" ist jetzt Teil von Emberhold!")}}}
@@ -170,24 +170,24 @@ for(let y=-4.9;y<=5;y+=.65){log(-6.1,y,1.9);log(6.1,y,1.9)}
 let p=screen(2.8,1);
 // Inventory belongs to the rear storage, not floating on the front counter.
 // Keep a compact stock readout beside the stall without painting over the artwork.
-let inventoryP=screen(5.6,.05);
+let inventoryP=screen(5.6,1.15);
 ctx.save();ctx.font="bold 12px Georgia";const invLabel="🪵 "+stock.wood+"   🥩 "+stock.meat;
 const invWidth=Math.max(115,ctx.measureText(invLabel).width+22);
 ctx.fillStyle="rgba(38,36,26,.80)";ctx.beginPath();ctx.roundRect(inventoryP.x-invWidth/2,inventoryP.y-12,invWidth,28,8);ctx.fill();
 text(invLabel,inventoryP.x,inventoryP.y+7,12);ctx.restore();
-let cashP=screen(4.5,1);ellipse(cashP.x,cashP.y,scale*.55,scale*.22,"#d9b35a77");text("💰",cashP.x,cashP.y,20);
+let cashP=screen(4.5,2.8);ellipse(cashP.x,cashP.y,scale*.55,scale*.22,"#d9b35a77");text("💰",cashP.x,cashP.y,20);
 for(const z of zones){if(z.id==="hunter"&&!state.seller||z.id.startsWith("archer")&&!state.hunter||z.id==="carrier"&&state.archers<2)continue;let q=screen(z.x,z.y),done=state.progress[z.id]>=z.cost||(z.id==="seller"&&state.seller)||(z.id==="hunter"&&state.hunter)||(z.id==="carrier"&&state.carrier);ellipse(q.x,q.y,scale*.8,scale*.3,done?"#638c6977":"#d2b36b99");text(done?"✓":z.icon,q.x,q.y,Math.max(14,scale*.44));if(!done)text(z.label+" "+state.progress[z.id]+"/"+z.cost,q.x,q.y+scale*.5,11)}
 // The stall is a real layered object: back shelves behind the heroine,
 // front sales counter in front of her. The interior stays visible and walkable.
 function drawCounterLayer(front){
- const q=screen(2.8,1.65);
+ const q=screen(2.8,2.9);
  if(!counterArtReady){if(front){rect(q.x-scale*1.5,q.y-scale*.8,scale*3,scale*.9,"#765038")}return}
  const w=scale*5.5,h=w*counterArt.naturalHeight/counterArt.naturalWidth;
  const iw=counterArt.naturalWidth,ih=counterArt.naturalHeight;
- const cut=.55,srcY=front?Math.floor(ih*cut):0,srcH=front?ih-srcY:Math.floor(ih*cut);
+ const cut=.53,srcY=front?Math.floor(ih*cut):0,srcH=front?ih-srcY:Math.floor(ih*cut);
  ctx.drawImage(counterArt,0,srcY,iw,srcH,q.x-w/2,q.y-h+h*srcY/ih,w,h*srcH/ih);
 }
-let actors=[{y:-.8,draw:()=>drawCounterLayer(false)},{y:1.7,draw:()=>drawCounterLayer(true)},...trees.filter(t=>t.respawn<=0).map(t=>({y:t.y,draw:()=>tree(t)})),...bears.map(b=>({y:b.y,draw:()=>bear(b)})),{y:hero.y,draw:()=>human(hero.x,hero.y,hero.dress)}];if(state.seller)actors.push({y:.05,draw:()=>human(2.8,.05,1,true)});if(state.hunter)actors.push({y:-6.9,draw:()=>human(-4.4,-6.9,1,true)});for(let i=0;i<state.archers;i++)actors.push({y:-5.5,draw:()=>human(i?-5.4:5.4,-5.5,1,true)});if(state.carrier)actors.push({y:-2.9,draw:()=>human(-3.7,-2.9,1,true)});actors.sort((a,b)=>a.y-b.y).forEach(a=>a.draw());
+let actors=[{y:-2.1,draw:()=>drawCounterLayer(false)},{y:2.95,draw:()=>drawCounterLayer(true)},...trees.filter(t=>t.respawn<=0).map(t=>({y:t.y,draw:()=>tree(t)})),...bears.map(b=>({y:b.y,draw:()=>bear(b)})),{y:hero.y,draw:()=>human(hero.x,hero.y,hero.dress)}];if(state.seller)actors.push({y:1.05,draw:()=>human(2.8,1.05,1,true)});if(state.hunter)actors.push({y:-6.9,draw:()=>human(-4.4,-6.9,1,true)});for(let i=0;i<state.archers;i++)actors.push({y:-5.5,draw:()=>human(i?-5.4:5.4,-5.5,1,true)});if(state.carrier)actors.push({y:-2.9,draw:()=>human(-3.7,-2.9,1,true)});actors.sort((a,b)=>a.y-b.y).forEach(a=>a.draw());
 for(let i=0;i<customers.length;i++){let c=customers[i];human(2+i*.78,7.2,0,true)}
 for(const d of drops){let p=screen(d.x,d.y);text(d.type==="wood"?"🪵":"🥩",p.x,p.y,Math.max(14,scale*.42))}
 for(const d of moneyDrops){let p=screen(d.x,d.y);text("💵",p.x,p.y,Math.max(12,scale*.34))}
