@@ -12,7 +12,7 @@
    images[kind].push(im);all.push(im.decode().catch(()=>null));
   }
  }
- Promise.all(all).then(()=>{ready=Object.values(images).every(a=>a.every(im=>im.naturalWidth>0));});
+ Promise.all(all).then(()=>{ready=Object.values(images).some(a=>a.some(im=>im.naturalWidth>0));});
  const original=drawHeroine;
  drawHeroine=function(now=performance.now()){
   if(!ready){original(now);return;}
@@ -20,15 +20,20 @@
   const attacking=age>=0&&age<.64;
   let kind,index;
   if(attacking){kind="attack";index=Math.min(3,Math.floor(age/.64*4));}
-  else if(heroine.move){const vertical=Math.abs(joystick.y)>Math.abs(joystick.x)*1.25;kind=vertical?(joystick.y<0?"walk_back":"walk_front"):"walk_side";index=Math.floor(heroine.walk*11)%groups[kind];}
-  else {kind="idle";index=Math.floor(now/1000*3)%5;}
+  else if(heroine.move){const vertical=Math.abs(joystick.y)>Math.abs(joystick.x)*1.25;kind=vertical?(joystick.y<0?"walk_back":"walk_front"):"walk_side";index=Math.floor(heroine.walk*5)%groups[kind];}
+  else {kind="idle";index=Math.floor(now/1000*1.5)%5;}
   const im=images[kind][index];
+  if(!im || !im.naturalWidth){original(now);return;}
   const g=counterCtx;
   g.save();
   g.translate(W/2+(heroine.x-camX)*zoom,H/2+(heroine.y-camY)*zoom);
   // Images face right; mirror for movement left. The feet are the stable anchor.
   g.scale(zoom*(heroine.dir<0?-1:1),zoom);
-  g.drawImage(im,-90,-236,180,248);
+  // Keep the complete PNG visible, preserve aspect ratio, and anchor at the feet.
+  const maxWidth=94,maxHeight=128;
+  const scale=Math.min(maxWidth/im.naturalWidth,maxHeight/im.naturalHeight);
+  const dw=im.naturalWidth*scale,dh=im.naturalHeight*scale;
+  g.drawImage(im,-dw/2,-dh+8,dw,dh);
   g.restore();
  };
 })();
