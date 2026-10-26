@@ -32,7 +32,7 @@ function reliefLight(x,y){
  const cross=elevation(x-12,y+12)-elevation(x+12,y-12);
  return clamp(.98+(left-right)*1.5+cross*.65,.73,1.22);
 }
-function groundColor(f,wx,wy){
+function groundColor(f,wx,wy,sun){
  const m=f.moss,s=f.soil,wet=f.mud,lit=f.open;
  let r=mix(56+lit*54,35+lit*30,m*.75),g=mix(85+lit*50,75+lit*44,m*.75),b=mix(42+lit*20,35+lit*17,m*.75);
  r=mix(r,134+lit*26,s*.91);g=mix(g,98+lit*22,s*.91);b=mix(b,58+lit*15,s*.91);
@@ -156,13 +156,13 @@ function makeTile(tx,ty){
  // Sample slowly varying biome fields on an 8px grid, then interpolate.
  // This avoids costly multi-octave noise for every single pixel.
  const STEP=8,N=TILE/STEP,fields=[];
- for(let y=0;y<=N;y++){const row=[];for(let x=0;x<=N;x++)row.push(landscape(tx*TILE+x*STEP,ty*TILE+y*STEP));fields.push(row)}
+ for(let y=0;y<=N;y++){const row=[];for(let x=0;x<=N;x++)row.push({...landscape(tx*TILE+x*STEP,ty*TILE+y*STEP),sun:reliefLight(tx*TILE+x*STEP,ty*TILE+y*STEP)});fields.push(row)}
  for(let y=0;y<TILE;y++){
   const iy=y>>3,fy=(y%STEP)/STEP;
   for(let x=0;x<TILE;x++){
    const ix=x>>3,fx=(x%STEP)/STEP,a=fields[iy][ix],b=fields[iy][ix+1],c0=fields[iy+1][ix],d=fields[iy+1][ix+1],f={};
-   for(const k of ["moss","soil","mud","open"])f[k]=mix(mix(a[k],b[k],fx),mix(c0[k],d[k],fx),fy);
-   const wx=tx*TILE+x,wy=ty*TILE+y,color=groundColor(f,wx,wy),i=(y*TILE+x)*4;
+   for(const k of ["moss","soil","mud","open","sun"])f[k]=mix(mix(a[k],b[k],fx),mix(c0[k],d[k],fx),fy);
+   const wx=tx*TILE+x,wy=ty*TILE+y,color=groundColor(f,wx,wy,f.sun),i=(y*TILE+x)*4;
    p[i]=color[0];p[i+1]=color[1];p[i+2]=color[2];p[i+3]=255;
   }
  }
