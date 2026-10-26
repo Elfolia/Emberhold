@@ -51,23 +51,58 @@ function makeTile(tx,ty){
   p[i]=Math.max(0,Math.min(255,color[0]+grain));p[i+1]=Math.max(0,Math.min(255,color[1]+grain));p[i+2]=Math.max(0,Math.min(255,color[2]+grain*.8));p[i+3]=255;
  }
  g.putImageData(im,0,0);
- // Stable fine-scale vegetation, leaf litter, pebbles and flowers.
- const rng=randMaker(tx,ty);
- for(let i=0;i<1650;i++){
-  const x=rng()*TILE,y=rng()*TILE,wx=tx*TILE+x,wy=ty*TILE+y;
-  const soil=fbm(wx/230,wy/230,34)<.45,kind=rng();
-  if(kind<.57&&!soil){
-   g.strokeStyle=rng()>.5?"#b5c879ad":"#1e4129aa";g.lineWidth=.6+rng()*1.1;
-   g.beginPath();g.moveTo(x,y);g.lineTo(x+(rng()-.5)*4,y-2-rng()*5);g.stroke();
-  }else if(kind<.78){oval(g,x,y,1+rng()*3,.5+rng()*1.5,soil?"#76543a88":"#c2b46a80")}
-  else if(kind<.9){oval(g,x,y,1+rng()*3,1+rng()*2,"#5b665088");oval(g,x-1,y-1,1+rng()*2,.8+rng(),"#c3bb9caa")}
-  else if(kind<.95&&!soil){const col=["#f2e7c0","#f0d27b","#e8ac8f","#fff5df"][Math.floor(rng()*4)];for(let a=0;a<5;a++){const ang=a*Math.PI*2/5;oval(g,x+Math.cos(ang)*2.4,y+Math.sin(ang)*2.4,1.3,1.1,col)}oval(g,x,y,1,1,"#d0a149")}
-  else if(!soil){oval(g,x,y,4+rng()*6,2+rng()*3,"#183d2855");for(let j=0;j<5;j++)oval(g,x+(rng()-.5)*10,y+(rng()-.5)*6,1+rng()*2,1+rng()*2,"#94b45a88")}
+ // Each ground object is selected from local moisture, soil and light conditions.
+ // Global grid cells keep positions identical even after a tile leaves the cache.
+ const CELL=15,margin=18;
+ const gx0=Math.floor((tx*TILE-margin)/CELL),gx1=Math.ceil(((tx+1)*TILE+margin)/CELL);
+ const gy0=Math.floor((ty*TILE-margin)/CELL),gy1=Math.ceil(((ty+1)*TILE+margin)/CELL);
+ for(let gy=gy0;gy<=gy1;gy++)for(let gx=gx0;gx<=gx1;gx++){
+  const rng=randMaker(gx,gy),wx=gx*CELL+rng()*CELL,wy=gy*CELL+rng()*CELL;
+  const x=wx-tx*TILE,y=wy-ty*TILE;
+  const moisture=fbm(wx/350,wy/350,12),grassiness=fbm(wx/230,wy/230,34);
+  const sun=fbm(wx/670,wy/670,6),rockiness=fbm(wx/460,wy/460,46);
+  const soil=Math.max(0,Math.min(1,(.49-grassiness)*4));
+  const mud=Math.max(0,Math.min(1,(moisture-.54)*4))*soil;
+  const lush=(1-soil)*Math.max(.2,moisture);
+  const choice=rng();
+  // Mud appears only on wet, exposed soil, with tiny reflective wet highlights.
+  if(mud>.23&&choice<mud*.65){
+   oval(g,x,y,4+rng()*9,1.7+rng()*4,"#423d2b85");
+   if(rng()<.6)oval(g,x-1,y-1,1+rng()*4,.5+rng(),"#b7aa7999");
+  }else if(rockiness>.54&&choice<.11){
+   const radius=2+rng()*4;
+   oval(g,x+1,y+1,radius*1.15,radius*.65,"#172b1c66");
+   oval(g,x,y,radius,radius*.56,"#777a638e");
+   oval(g,x-1,y-1,radius*.53,radius*.22,"#c8c2a0b8");
+  }else if(soil>.58&&choice<.55){
+   // Fine leaf litter and grit on drier exposed ground.
+   g.save();g.translate(x,y);g.rotate(rng()*Math.PI);
+   oval(g,0,0,1.5+rng()*3,.5+rng()*1.3,rng()<.5?"#c09b638f":"#61492f99");g.restore();
+  }else if(lush>.32&&sun>.41&&choice<.042){
+   // Flowers grow in sunlit, grassy places; petals and center are separate shapes.
+   const radius=2+rng()*2.2;
+   const col=["#f7e9bf","#fff8e7","#efbd9c","#e7cf72"][Math.floor(rng()*4)];
+   g.strokeStyle="#365e35";g.lineWidth=.85;g.beginPath();g.moveTo(x,y+3);g.lineTo(x,y);g.stroke();
+   for(let k=0;k<5;k++){const angle=k*Math.PI*2/5;oval(g,x+Math.cos(angle)*radius,y+Math.sin(angle)*radius,radius*.66,radius*.55,col)}
+   oval(g,x,y,1.1,1.1,"#b88a37");
+  }else if(lush>.24&&choice<.82){
+   // Clumps of crisp individual grass blades; more in damp grasslands.
+   const blades=2+Math.floor(rng()*5);
+   for(let k=0;k<blades;k++){
+    const bx=x+(rng()-.5)*7,by=y+(rng()-.5)*3,h=3+rng()*8;
+    g.strokeStyle=rng()<.42?"#c4cb7dc2":rng()<.5?"#2d542dca":"#739d4dcc";
+    g.lineWidth=.65+rng()*.7;g.beginPath();g.moveTo(bx,by);g.quadraticCurveTo(bx+(rng()-.5)*4,by-h*.55,bx+(rng()-.5)*7,by-h);g.stroke();
+   }
+  }else if(lush>.48&&choice<.92){
+   // Small moss cushions with highlights and self-shadow.
+   oval(g,x,y+1,4+rng()*4,2+rng()*2,"#254a2e88");
+   for(let k=0;k<5;k++)oval(g,x+(rng()-.5)*8,y+(rng()-.5)*5,1+rng()*2,.8+rng()*1.5,"#9db76e99");
+  }
  }
  return c;
 }
 function tile(tx,ty){const key=tx+","+ty;if(cache.has(key)){const c=cache.get(key);cache.delete(key);cache.set(key,c);return c}const c=makeTile(tx,ty);cache.set(key,c);if(cache.size>MAX_TILES)cache.delete(cache.keys().next().value);return c}
-// The approved illustrated forest-floor artwork is the actual terrain texture.
+// The approved illustration supplies a color palette, not repeated picture fragments.
 // Keep it locked to world coordinates; never randomize or repaint it per frame.
 const paintedGround=new Image();let paintedGroundReady=false;
 paintedGround.onload=()=>{paintedGroundReady=true;learnPalette();cache.clear();render()};
