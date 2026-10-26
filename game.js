@@ -14,7 +14,7 @@ function say(t){$("toast").textContent=t;notice=4}
 function save(){try{localStorage.setItem("emberhold-v1",JSON.stringify({hero:{money:hero.money,dress:hero.dress},stock,state,elapsed}))}catch(e){}}
 function load(){try{let s=JSON.parse(localStorage.getItem("emberhold-v1"));if(!s)return false;hero.money=s.hero.money||0;hero.dress=s.hero.dress||0;Object.assign(stock,s.stock||{});Object.assign(state,s.state||{});state.progress=Object.assign({seller:0,hunter:0,archerL:0,archerR:0,carrier:0},state.progress);elapsed=s.elapsed||0;return true}catch(e){return false}}
 function init(){for(let i=0;i<43;i++){let a=i*2.3999,r=8.3+(i%7)*2.5;trees.push({x:Math.cos(a)*r,y:Math.sin(a)*r,hp:4,respawn:0,shake:0})}for(let i=0;i<5;i++)spawnBear();for(let i=0;i<5;i++)customers.push({x:2+i*.85,y:7.3,wait:rand(0,3),phase:rand(0,7)});load();$("play").textContent="Spiel fortsetzen";say("Willkommen in Emberhold. Sammle Holz und Fleisch!")}
-function spawnBear(){let a=rand(0,Math.PI*2),r=rand(9,16);bears.push({x:Math.cos(a)*r,y:Math.sin(a)*r,hp:7,cool:0,wobble:rand(0,6),facing:1,moving:false,attack:0})}
+function spawnBear(){let a=rand(0,Math.PI*2),r=rand(9,16);bears.push({x:Math.cos(a)*r,y:Math.sin(a)*r,hp:7,cool:0,wobble:rand(0,6),facing:1,moving:false,attack:0,walkTime:rand(0,1),state:"idle"})}
 function item(x,y,type,n=1){for(let i=0;i<n;i++)drops.push({x:x+rand(-.65,.65),y:y+rand(-.65,.65),type,age:0})}
 function effect(x,y,color,n=5){for(let i=0;i<n;i++)particles.push({x,y,vx:rand(-2,2),vy:rand(-2,1),life:rand(.3,.8),color})}
 function step(dt){
@@ -25,7 +25,7 @@ if(ml>.1){hero.x+=mv.x/ml*3.4*dt;hero.y+=mv.y/ml*3.4*dt;hero.dir=mv.x<0?-1:1}
 hero.x=clamp(hero.x,-28,28);hero.y=clamp(hero.y,-26,26);hero.hit-=dt;hero.invuln-=dt;
 if(fort(hero.x,hero.y))hero.hp=Math.min(100,hero.hp+12*dt);
 for(const t of trees){if(t.respawn>0){t.respawn-=dt;continue}t.shake=Math.max(0,t.shake-dt);if(distance(hero,t)<1.35&&hero.hit<=0){hero.hit=.58;t.hp--;t.shake=.23;effect(t.x,t.y,"#e4bb70",3);if(t.hp<=0){item(t.x,t.y,"wood",4);t.respawn=19;t.hp=4}}}
-for(const b of bears){b.cool-=dt;b.attack=Math.max(0,(b.attack||0)-dt);b.moving=false;const d=distance(hero,b);if(d<4.2&&!fort(hero.x,hero.y)){const dx=(hero.x-b.x)/Math.max(d,.1),dy=(hero.y-b.y)/Math.max(d,.1);if(d>1.15){b.x+=dx*.7*dt;b.y+=dy*.7*dt;b.facing=dx<0?-1:1;b.moving=true}}if(fort(b.x,b.y)){b.x*=1+dt*.3;b.y*=1+dt*.3}if(d<1.45&&!fort(hero.x,hero.y)&&b.cool<=0&&hero.invuln<=0){hero.hp-=13;b.cool=1.8;b.attack=.55;hero.invuln=.7;effect(hero.x,hero.y,"#c74435",6);say("Autsch! Zurück ins Fort zum Ausruhen.")}if(d<1.45&&hero.hit<=0){hero.hit=.65;b.hp-=2;effect(b.x,b.y,"#c69a69",4)}if(state.archers&&distance(b,{x:0,y:0})<11){b.hp-=state.archers*.55*dt}}
+for(const b of bears){b.cool-=dt;b.attack=Math.max(0,(b.attack||0)-dt);b.moving=false;const d=distance(hero,b);if(d<4.2&&!fort(hero.x,hero.y)){const dx=(hero.x-b.x)/Math.max(d,.1),dy=(hero.y-b.y)/Math.max(d,.1);if(d>1.15){b.x+=dx*.7*dt;b.y+=dy*.7*dt;b.facing=dx<0?-1:1;b.moving=true;b.walkTime=(b.walkTime||0)+dt*5.8}}if(fort(b.x,b.y)){b.x*=1+dt*.3;b.y*=1+dt*.3}if(d<1.45&&!fort(hero.x,hero.y)&&b.cool<=0&&hero.invuln<=0){hero.hp-=13;b.cool=1.8;b.attack=.55;hero.invuln=.7;effect(hero.x,hero.y,"#c74435",6);say("Autsch! Zurück ins Fort zum Ausruhen.")}if(d<1.45&&hero.hit<=0){hero.hit=.65;b.hp-=2;effect(b.x,b.y,"#c69a69",4)}if(state.archers&&distance(b,{x:0,y:0})<11){b.hp-=state.archers*.55*dt}}
 for(let i=bears.length-1;i>=0;i--)if(bears[i].hp<=0){let b=bears[i];item(b.x,b.y,"meat",5);bears.splice(i,1);effect(b.x,b.y,"#d9b77b",9)}
 if(bears.length<5&&Math.random()<dt*.13)spawnBear();
 if(hero.hp<=0){hero.x=0;hero.y=1;hero.hp=65;say("Du bist im Fort wieder aufgewacht. Deine Waren bleiben erhalten.")}
@@ -59,16 +59,26 @@ function tree(t){if(t.respawn>0)return;let p=screen(t.x,t.y),s=scale;
 if(treeArtReady){let h=s*4.25,w=h*treeArt.naturalWidth/treeArt.naturalHeight;ctx.save();if(t.shake)ctx.translate(Math.sin(elapsed*40)*s*.045,0);ctx.drawImage(treeArt,p.x-w*.5,p.y-h*.95,w,h);ctx.restore();return}
 ellipse(p.x,p.y+3,s*.55,s*.18,"#253b2877");rect(p.x-s*.13,p.y-s*1.4,s*.26,s*1.4,"#70513a");for(let i=0;i<3;i++){let off=t.shake?Math.sin(elapsed*40)*s*.08:0;ellipse(p.x+off+(i-1)*s*.3,p.y-s*(1.5+i*.3),s*(.72-i*.09),s*(.62-i*.06),["#456a47","#5e8051","#73915b"][i])}}
 function human(x,y,dress=0,small=false){let p=screen(x,y),s=scale*(small?.8:1);ellipse(p.x,p.y,s*.26,s*.1,"#18261d77");poly([[p.x-s*.18,p.y-s*.82],[p.x+s*.18,p.y-s*.82],[p.x+s*.32,p.y-s*.16],[p.x-s*.3,p.y-s*.16]],dress?"#d7bfa2":"#a8957d");rect(p.x-s*.12,p.y-s*.18,s*.09,s*.21,"#6e5546");rect(p.x+s*.07,p.y-s*.18,s*.09,s*.21,"#6e5546");ellipse(p.x,p.y-s*1.03,s*.2,s*.26,"#e1b48a");ellipse(p.x-s*.045,p.y-s*1.18,s*.24,s*.19,"#8b6a3e");rect(p.x-s*.22,p.y-s*.85,s*.09,s*.42,"#e1b48a");rect(p.x+s*.13,p.y-s*.85,s*.09,s*.42,"#e1b48a");if(!small)text("🪓",p.x+s*.29,p.y-s*.48,Math.max(11,s*.36))}
+// Hand-painted sprite atlas: 6 walk frames in row 0; 4 attack frames in row 1.
+// Every frame is 220x170; the ground line is y=140 (walk) / y=161 (attack).
+const bearWalkSheet=new Image();bearWalkSheet.src="./assets/bear-animations.png";
+let bearWalkReady=false;bearWalkSheet.onload=()=>{bearWalkReady=bearWalkSheet.naturalWidth===1320&&bearWalkSheet.naturalHeight===340};
 const bearArt=new Image();bearArt.src="./assets/enchanted-bear.png";let bearArtReady=false;bearArt.onload=()=>bearArtReady=true;
 function bear(b){let p=screen(b.x,b.y),s=scale;
-if(bearArtReady){let phase=elapsed*7+(b.wobble||0),bob=b.moving?Math.sin(phase)*s*.045:Math.sin(elapsed*1.8+(b.wobble||0))*s*.018;
-let attack=b.attack>0?Math.sin((.55-b.attack)/.55*Math.PI)*s*.18:0;
-let h=s*1.95,w=h*bearArt.naturalWidth/bearArt.naturalHeight;
-ctx.save();ctx.translate(p.x,p.y+bob);ctx.scale(b.facing||1,1);
-ellipse(0,2,s*.55,s*.14,"#17251a55");
-ctx.drawImage(bearArt,-w*.5,-h+attack,w,h);
-ctx.restore();return}
-ellipse(p.x,p.y,s*.58,s*.19,"#17251a66");ellipse(p.x,p.y-s*.55,s*.59,s*.52,"#70503c");ellipse(p.x,p.y-s*.95,s*.43,s*.37,"#815b42");ellipse(p.x-s*.29,p.y-s*1.24,s*.16,s*.17,"#76513a");ellipse(p.x+s*.29,p.y-s*1.24,s*.16,s*.17,"#76513a");ellipse(p.x,p.y-s*.81,s*.21,s*.16,"#ac8869");ellipse(p.x,p.y-s*.88,s*.07,s*.05,"#392b27");rect(p.x-s*.19,p.y-s*1.03,s*.06,s*.05,"#201c18");rect(p.x+s*.13,p.y-s*1.03,s*.06,s*.05,"#201c18")}
+ctx.save();ctx.translate(p.x,p.y);ctx.scale(b.facing||1,1);
+ellipse(0,2,s*.58,s*.17,"#17251a55");
+if(bearWalkReady){
+ const attacking=b.attack>0;
+ const frame=attacking?Math.min(3,Math.floor((.55-b.attack)/.55*4)):b.moving?Math.floor((b.walkTime||0))%6:0;
+ const sourceX=frame*220,sourceY=attacking?170:0,groundY=attacking?161:140;
+ const w=s*2.15,h=w*170/220;
+ // Fixed foot anchor: sprite frames advance but feet never float off the terrain.
+ ctx.drawImage(bearWalkSheet,sourceX,sourceY,220,170,-w/2,-groundY*h/170,w,h);
+ ctx.restore();return;
+}
+if(bearArtReady){let h=s*1.95,w=h*bearArt.naturalWidth/bearArt.naturalHeight;ctx.drawImage(bearArt,-w*.5,-h,w,h);ctx.restore();return}
+ctx.restore();
+ellipse(p.x,p.y-s*.55,s*.59,s*.52,"#70503c");ellipse(p.x,p.y-s*.95,s*.43,s*.37,"#815b42");ellipse(p.x-s*.29,p.y-s*1.24,s*.16,s*.17,"#76513a");ellipse(p.x+s*.29,p.y-s*1.24,s*.16,s*.17,"#76513a");ellipse(p.x,p.y-s*.81,s*.21,s*.16,"#ac8869");ellipse(p.x,p.y-s*.88,s*.07,s*.05,"#392b27")}
 
 function render(){
 camX+=(hero.x-camX)*.07;camY+=(hero.y-camY)*.07;let dayPhase=(state.day%1),night=Math.max(0,Math.sin(dayPhase*Math.PI*2-Math.PI/2)*-.5+.1);
