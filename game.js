@@ -101,7 +101,7 @@ function human(x,y,dress=0,small=false){let p=screen(x,y),s=scale*(small?.8:1);e
 // Clean user-uploaded atlas: 8 walk frames and 8 attack frames, each 440 x 340.
 const counterArt=new Image();let counterArtReady=false;
 counterArt.onload=()=>counterArtReady=true;
-counterArt.src="./assets/emberhold-verkaufstresen.png?v=1";
+counterArt.src="./assets/emberhold-tresen-vollstaendig.png?v=2";
 const bearWalkSheet=new Image();
 let bearWalkReady=false;
 bearWalkSheet.onload=()=>{bearWalkReady=bearWalkSheet.naturalWidth===3520&&bearWalkSheet.naturalHeight===680};
