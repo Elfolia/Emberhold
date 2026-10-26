@@ -133,7 +133,35 @@ if(night>.2){let q=screen(2.8,1);let glow=ctx.createRadialGradient(q.x,q.y,1,q.x
 if(!state.dress&&stock.wood<30||!state.dress&&stock.meat<30){let q=screen(2.8,1);text("✨ Nachthemd: 30 Holz + 30 Fleisch",q.x,q.y-scale*2.4,12)}
 }
 const stick={x:0,y:0},keys={};$("stick").addEventListener("pointerdown",e=>{e.currentTarget.setPointerCapture(e.pointerId);joy(e)});$("stick").addEventListener("pointermove",e=>{if(e.currentTarget.hasPointerCapture(e.pointerId))joy(e)});function joy(e){let b=$("stick").getBoundingClientRect(),x=e.clientX-b.left-b.width/2,y=e.clientY-b.top-b.height/2,l=Math.max(1,Math.hypot(x,y));stick.x=x/l*Math.min(1,l/48);stick.y=y/l*Math.min(1,l/48);$("knob").style.transform="translate("+(stick.x*35)+"px,"+(stick.y*35)+"px)"}function stop(){stick.x=stick.y=0;$("knob").style.transform=""}$("stick").addEventListener("pointerup",stop);$("stick").addEventListener("pointercancel",stop);addEventListener("keydown",e=>{keys[e.key.toLowerCase()]=true});addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false});
-let audio=null,muted=true;$("sound").onclick=()=>{muted=!muted;$("sound").textContent=muted?"🔇 Ton":"🔊 Ton";if(!muted){audio=audio||new (window.AudioContext||window.webkitAudioContext)();audio.resume()}};function ambience(){if(muted||!audio)return;let o=audio.createOscillator(),g=audio.createGain();o.type="sine";o.frequency.value=[196,220,261,293,329][Math.floor(rand(0,5))];g.gain.setValueAtTime(.0001,audio.currentTime);g.gain.exponentialRampToValueAtTime(.015,audio.currentTime+.15);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+1.5);o.connect(g).connect(audio.destination);o.start();o.stop(audio.currentTime+1.6)}setInterval(ambience,2400);
+// Original generative Emberhold score, synthesized locally (no copyrighted audio).
+let audio=null,muted=true,musicClock=null,musicStep=0,musicMaster=null;
+const score=[0,4,7,11,7,4,2,7,0,4,9,7,4,2,-1,2, -3,0,4,7,4,0,2,4,-5,-1,2,7,2,-1,-3,-1];
+const chords=[[0,4,7],[-3,0,4],[-5,-1,2],[-3,0,4]];
+function tone(midi,when,duration,volume=.07,wave="sine"){
+ if(!audio||muted)return;
+ const hz=440*Math.pow(2,(midi-69)/12),osc=audio.createOscillator(),gain=audio.createGain();
+ osc.type=wave;osc.frequency.setValueAtTime(hz,when);
+ gain.gain.setValueAtTime(.0001,when);
+ gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),when+.045);
+ gain.gain.exponentialRampToValueAtTime(.0001,when+duration);
+ osc.connect(gain).connect(musicMaster);osc.start(when);osc.stop(when+duration+.06);
+}
+function musicTick(){
+ if(!audio||muted||!musicMaster)return;
+ const now=audio.currentTime+.025,n=musicStep++,beat=.38;
+ // Gentle celesta-like melody with soft low drone and arpeggiated accompaniment.
+ const note=score[n%score.length],seasonShift=state.season===3?-2:0;
+ if(n%2===0)tone(72+note+seasonShift,now,beat*1.7,.075,"sine");
+ if(n%4===0){const chord=chords[Math.floor(n/8)%4];tone(48+chord[0],now,beat*7,.029,"triangle");}
+ if(n%2===1){const chord=chords[Math.floor(n/8)%4];tone(60+chord[Math.floor(n/2)%3],now,beat*1.8,.026,"sine")}
+}
+function startMusic(){
+ if(!audio){audio=new (window.AudioContext||window.webkitAudioContext)();musicMaster=audio.createGain();musicMaster.gain.value=.5;musicMaster.connect(audio.destination)}
+ audio.resume();
+ if(!musicClock){musicTick();musicClock=setInterval(musicTick,380)}
+}
+$("sound").onclick=()=>{muted=!muted;$("sound").textContent=muted?"🔇 Ton":"🔊 Musik";if(!muted)startMusic();else if(audio)audio.suspend()};
+
 function frame(t){let dt=Math.min(.045,(t-last)/1000||.016);last=t;step(dt);render();requestAnimationFrame(frame)}
 $("play").onclick=()=>{$("start").style.display="none";last=performance.now();requestAnimationFrame(frame)};addEventListener("resize",resize);addEventListener("pagehide",save);resize();init();render();
 })();
