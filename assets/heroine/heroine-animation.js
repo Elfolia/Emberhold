@@ -1,7 +1,7 @@
 // Emberhold heroine animation asset integration.
 // Include AFTER game-heroine-v40.js; all paths relative to the HTML page.
 (()=>{
- const root="assets/heroine/";
+ const root="assets/";
  const groups={walk_side:9,walk_front:7,walk_back:7,attack:4,idle:5};
  const images={};let ready=false;
  const all=[];
@@ -20,8 +20,8 @@
   const attacking=age>=0&&age<.64;
   let kind,index;
   if(attacking){kind="attack";index=Math.min(3,Math.floor(age/.64*4));}
-  else if(heroine.move){const vertical=Math.abs(joystick.y)>Math.abs(joystick.x)*1.25;kind=vertical?(joystick.y<0?"walk_back":"walk_front"):"walk_side";index=Math.floor(heroine.walk*5)%groups[kind];}
-  else {kind="idle";index=Math.floor(now/1000*1.5)%5;}
+  else if(heroine.move){const vertical=Math.abs(joystick.y)>Math.abs(joystick.x)*1.25;kind=vertical?(joystick.y<0?"walk_back":"walk_front"):"walk_side";index=Math.floor(heroine.walk*3.2)%groups[kind];}
+  else {kind="idle";index=0;}
   const im=images[kind][index];
   if(!im || !im.naturalWidth){original(now);return;}
   const g=counterCtx;
@@ -30,10 +30,10 @@
   // Images face right; mirror for movement left. The feet are the stable anchor.
   g.scale(zoom*(heroine.dir<0?-1:1),zoom);
   // Keep the complete PNG visible, preserve aspect ratio, and anchor at the feet.
-  const maxWidth=94,maxHeight=128;
+  const maxWidth=112,maxHeight=145;
   const scale=Math.min(maxWidth/im.naturalWidth,maxHeight/im.naturalHeight);
   const dw=im.naturalWidth*scale,dh=im.naturalHeight*scale;
-  g.drawImage(im,-dw/2,-dh+8,dw,dh);
+  g.drawImage(im,-dw/2,-dh,dw,dh);
   g.restore();
  };
 })();
