@@ -24,6 +24,14 @@ for(const [width,height] of [[390,844],[844,390],[1024,1366]]){
  assert.ok(Math.abs(w/h-180/248)<.001);
  }
 }
+// Comparable visible heights at zoom 1, plus safety while camera lags far behind.
+W=390;H=844;zoom=1;camX=heroine.x;camY=heroine.y-H*.1;
+drawHeroine(1000);
+assert.ok(Math.abs(parseFloat(heroineElement.style.height)*178/248-100*213/245)<5);
+camY=heroine.y+1000;drawHeroine(1000);
+assert.ok(parseFloat(heroineElement.style.top)-parseFloat(heroineElement.style.height)>=64);
+heroine.x=1000;heroine.y=1000;trees=[];joystick.x=1;
+heroineTick(.05,1000);assert.equal(heroine.x,1003);joystick.x=0;heroine.move=false;
 drawHeroine(0);const first=heroineElement.src;drawHeroine(240);assert.notEqual(heroineElement.src,first);
 // Solid counter edges, fence sides, rear and front; open central gate.
 for(const point of [[0,0],[204,0],[-204,0],[340,0],[-340,0],[0,-225],[200,230],[-200,230],[94,180],[-94,180]])assert.ok(blockedAt(...point));

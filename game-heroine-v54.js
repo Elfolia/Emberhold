@@ -384,7 +384,7 @@ for(const [state,count] of Object.entries({idle:5,walk_side:9,walk_front:7,walk_
 // Dedicated top-layer illustrated heroine, independent of foreground canvas clearing.
 const heroineElement=document.createElement("img");
 heroineElement.alt="Heldin";heroineElement.draggable=false;
-Object.assign(heroineElement.style,{position:"fixed",zIndex:"9",pointerEvents:"none",width:"180px",height:"248px",objectFit:"contain",objectPosition:"center center",left:"50%",top:"50%",transformOrigin:"center bottom",userSelect:"none"});
+Object.assign(heroineElement.style,{position:"fixed",zIndex:"9",pointerEvents:"none",display:"block",margin:"0",padding:"0",border:"0",maxWidth:"none",maxHeight:"none",width:"180px",height:"248px",objectFit:"contain",objectPosition:"center center",left:"50%",top:"50%",transformOrigin:"center bottom",userSelect:"none"});
 document.body.appendChild(heroineElement);
 let shownHeroineFrame="";
 function drawHeroine(now=performance.now()){
@@ -399,11 +399,15 @@ function drawHeroine(now=performance.now()){
  if(!frame){heroineElement.style.visibility="hidden";return;}
  heroineElement.style.visibility="visible";
  if(shownHeroineFrame!==frame.src){heroineElement.src=frame.src;shownHeroineFrame=frame.src;}
- const x=W/2+(heroine.x-camX)*zoom,y=H/2+(heroine.y-camY)*zoom;
+ // The visible figure occupies about 178 of the PNG's 248 pixels.
+ // 124 world pixels gives an 89px figure, matching the merchant's 87px silhouette.
+ const height=Math.min(124*zoom,H*.5,W*.8*frame.naturalHeight/frame.naturalWidth);
+ const width=height*frame.naturalWidth/frame.naturalHeight;
+ // Keep the whole frame below the HUD, including during camera easing and resize.
+ const x=clamp(W/2+(heroine.x-camX)*zoom,width/2+8,W-width/2-8);
+ const y=clamp(H/2+(heroine.y-camY)*zoom,height+64,H-16);
  heroineElement.style.left=x+"px";heroineElement.style.top=y+"px";
- // Preserve the complete frame and its aspect ratio, including axe and hair.
- const height=Math.min(372*zoom,H*.68,W*.9*frame.naturalHeight/frame.naturalWidth);
- heroineElement.style.width=(height*frame.naturalWidth/frame.naturalHeight)+"px";
+ heroineElement.style.width=width+"px";
  heroineElement.style.height=height+"px";
  heroineElement.style.transform="translate(-50%,-100%) scaleX("+(heroine.dir<0?-1:1)+")";
 }
@@ -515,12 +519,12 @@ function heroineTick(dt,now){
  if(keys.i||keys.arrowup)dy-=1;if(keys.k||keys.arrowdown)dy+=1;
  const len=Math.hypot(dx,dy);h.move=len>.12;
  if(h.move){
-  const speed=115*Math.min(1,len);
+  const speed=60*Math.min(1,len);
   const stepX=dx/len*speed*dt,stepY=dy/len*speed*dt;
   if(!blockedAt(h.x+stepX,h.y))h.x+=stepX;
   if(!blockedAt(h.x,h.y+stepY))h.y+=stepY;
   if(Math.abs(dx)>.08)h.dir=dx<0?-1:1;
-  h.walk+=dt*speed/115;
+  h.walk+=dt*speed/60;
  }
  for(const pile of fallenWood){if(!pile.taken&&Math.hypot(pile.x-h.x,pile.y-h.y)<52){pile.taken=true;woodCarried+=3;updateWoodHud();}}
  // Deposit everything automatically when approaching the merchant's counter.
@@ -706,7 +710,7 @@ function drawTrees(time){
  }
  drawFallenWood();
 }
-function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;camX=heroine.x;camY=heroine.y-H*.22/zoom;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);windCanvas.width=canvas.width;windCanvas.height=canvas.height;counterCanvas.width=canvas.width;counterCanvas.height=canvas.height;treeCanvas.width=canvas.width;treeCanvas.height=canvas.height;trees=[];windDirty=true;render()}
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;camX=heroine.x;camY=heroine.y-H*.1/zoom;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);windCanvas.width=canvas.width;windCanvas.height=canvas.height;counterCanvas.width=canvas.width;counterCanvas.height=canvas.height;treeCanvas.width=canvas.width;treeCanvas.height=canvas.height;trees=[];windDirty=true;render()}
 canvas.addEventListener("click",e=>{
  // Until customers are implemented, tapping the merchant's counter previews a sale.
  const x=(e.clientX-W/2)/zoom+camX,y=(e.clientY-H/2)/zoom+camY;
@@ -715,5 +719,5 @@ canvas.addEventListener("click",e=>{
 
 canvas.addEventListener("wheel",e=>{e.preventDefault();zoom=clamp(zoom*(e.deltaY>0?.9:1.1),.75,1.5);windDirty=true;render()},{passive:false});
 const keys={};addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
-let last=performance.now();function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;heroineTick(dt,now);const ease=1-Math.exp(-12*dt);camX+=(heroine.x-camX)*ease;camY+=(heroine.y-H*.22/zoom-camY)*ease;render();if(now-lastWindFrame>50){drawWind(now);drawTrees(now);renderForeground(now);lastWindFrame=now}requestAnimationFrame(loop)}
+let last=performance.now();function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;heroineTick(dt,now);const ease=1-Math.exp(-12*dt);camX+=(heroine.x-camX)*ease;camY+=(heroine.y-H*.1/zoom-camY)*ease;render();if(now-lastWindFrame>50){drawWind(now);drawTrees(now);renderForeground(now);lastWindFrame=now}requestAnimationFrame(loop)}
 resize();requestAnimationFrame(loop);
