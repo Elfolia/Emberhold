@@ -411,6 +411,8 @@ function drawHeroine(now=performance.now()){
  heroineElement.style.left=x+"px";heroineElement.style.top=y+"px";
  heroineElement.style.width=width+"px";
  heroineElement.style.height=height+"px";
+ // Behind the counter, draw the heroine below its front panel like the merchant.
+ heroineElement.style.zIndex=heroine.y< -26?"2":"9";
  const breath=state==="idle"?(1-Math.cos(now*Math.PI/2400))*.35*zoom:0;
  heroineElement.style.transform="translate(-50%,-100%) translateY("+(-breath)+"px) scaleX("+(heroine.dir<0?-1:1)+")";
 }
@@ -513,8 +515,9 @@ function blockedAt(x,y){
  if(rect(-114,218,-74,243)||rect(74,218,114,243))return true;
  // Open door leaves stay beside the passage at the threshold.
  if(rect(-94,222,-58,238)||rect(58,222,94,238))return true;
- // Merchant counter: cannot walk through or stand on the worktop.
- if(rect(-132,-85,132,4))return true;
+ // Collision uses the counter foot area, not its screen-space height.
+ // The merchant stands around y=-46; that strip must stay walkable.
+ if(rect(-132,-12,132,4))return true;
  if(rect(195,-17,295,1))return true;
  return false;
 }

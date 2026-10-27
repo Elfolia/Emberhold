@@ -34,7 +34,7 @@ heroine.x=1000;heroine.y=1000;trees=[];joystick.x=1;
 heroineTick(.05,1000);assert.equal(heroine.x,1005.75);joystick.x=0;heroine.move=false;
 drawHeroine(0);const first=heroineElement.src;drawHeroine(240);assert.equal(heroineElement.src,first);drawHeroine(2400);assert.equal(heroineElement.src,first);
 // Solid counter edges, fence sides, rear and front; open central gate.
-for(const point of [[0,-40],[128,-40],[-128,-40],[340,0],[-340,0],[0,-225],[200,230],[-200,230],[94,230],[-94,230]])assert.ok(blockedAt(...point));
+for(const point of [[0,0],[128,0],[-128,0],[340,0],[-340,0],[0,-225],[200,230],[-200,230],[94,230],[-94,230]])assert.ok(blockedAt(...point));
 for(const y of [150,200,230,270])assert.equal(blockedAt(0,y),false);
 heroine.x=0;heroine.y=140;joystick.y=-1;
 for(let i=0;i<100;i++)heroineTick(.05,1000);
@@ -49,8 +49,16 @@ function walkTo(x,y){
 }
 for(const side of [-1,1]){
  heroine.x=0;heroine.y=300;
- walkTo(0,150);walkTo(side*170,150);walkTo(side*170,-125);walkTo(0,-125);
+ walkTo(0,150);walkTo(side*170,150);walkTo(side*170,-45);walkTo(side*90,-45);
+ // Stop directly beside the merchant at his feet, not far behind him.
+ assert.ok(!blockedAt(side*90,-45));drawHeroine(1000);
+ assert.equal(heroineElement.style.zIndex,'2');
+ walkTo(side*170,-45);walkTo(side*170,150);walkTo(0,150);walkTo(0,300);
 }
+// The counter remains solid when approached from the merchant's side.
+heroine.x=90;heroine.y=-45;joystick.y=1;
+for(let i=0;i<30;i++)heroineTick(.05,1000);
+assert.ok(heroine.y<=-26);joystick.y=0;
 // Unbounded inventory, collection exactly once, complete deposit exactly once.
 heroine.x=1000;heroine.y=1000;trees=[];woodCarried=1000000;
 fallenWood.push({x:1000,y:1000,taken:false});heroineTick(0,1000);heroineTick(0,1000);
