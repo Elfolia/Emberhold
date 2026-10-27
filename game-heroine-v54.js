@@ -391,7 +391,9 @@ function drawHeroine(now=performance.now()){
  const age=(now-heroine.attackAt)/1000,attacking=age>=0&&age<.64;
  const dx=joystick.x+(keys.l||keys.arrowright?1:0)-(keys.j||keys.arrowleft?1:0);
  const dy=joystick.y+(keys.k||keys.arrowdown?1:0)-(keys.i||keys.arrowup?1:0);
- let state="idle",index=Math.floor(now/240)%heroineFrames.idle.length;
+ // Keep one intact resting pose; switching the independently drawn idle frames
+ // makes hair, head and limbs jump even though the heroine is standing still.
+ let state="idle",index=0;
  if(attacking){state="attack";index=Math.min(3,Math.floor(age/.64*4));}
  else if(heroine.move){state=Math.abs(dy)>Math.abs(dx)*1.25?(dy<0?"walk_back":"walk_front"):"walk_side";index=Math.floor(heroine.walk*3.2)%heroineFrames[state].length;}
  const requested=heroineFrames[state][index];
@@ -409,7 +411,8 @@ function drawHeroine(now=performance.now()){
  heroineElement.style.left=x+"px";heroineElement.style.top=y+"px";
  heroineElement.style.width=width+"px";
  heroineElement.style.height=height+"px";
- heroineElement.style.transform="translate(-50%,-100%) scaleX("+(heroine.dir<0?-1:1)+")";
+ const breath=state==="idle"?(1-Math.cos(now*Math.PI/2400))*.35*zoom:0;
+ heroineElement.style.transform="translate(-50%,-100%) translateY("+(-breath)+"px) scaleX("+(heroine.dir<0?-1:1)+")";
 }
 // Floating touchscreen joystick; movement follows finger displacement.
 const joystick={x:0,y:0,pointer:null};
@@ -522,12 +525,12 @@ function heroineTick(dt,now){
  if(keys.i||keys.arrowup)dy-=1;if(keys.k||keys.arrowdown)dy+=1;
  const len=Math.hypot(dx,dy);h.move=len>.12;
  if(h.move){
-  const speed=60*Math.min(1,len);
+  const speed=115*Math.min(1,len);
   const stepX=dx/len*speed*dt,stepY=dy/len*speed*dt;
   if(!blockedAt(h.x+stepX,h.y))h.x+=stepX;
   if(!blockedAt(h.x,h.y+stepY))h.y+=stepY;
   if(Math.abs(dx)>.08)h.dir=dx<0?-1:1;
-  h.walk+=dt*speed/60;
+  h.walk+=dt*speed/115;
  }
  for(const pile of fallenWood){if(!pile.taken&&Math.hypot(pile.x-h.x,pile.y-h.y)<52){pile.taken=true;woodCarried+=3;updateWoodHud();}}
  // Deposit everything automatically when approaching the merchant's counter.

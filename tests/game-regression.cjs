@@ -31,8 +31,8 @@ assert.ok(Math.abs(parseFloat(heroineElement.style.height)*178/248-140*213/245)<
 camY=heroine.y+1000;drawHeroine(1000);
 assert.ok(parseFloat(heroineElement.style.top)-parseFloat(heroineElement.style.height)>=64);
 heroine.x=1000;heroine.y=1000;trees=[];joystick.x=1;
-heroineTick(.05,1000);assert.equal(heroine.x,1003);joystick.x=0;heroine.move=false;
-drawHeroine(0);const first=heroineElement.src;drawHeroine(240);assert.notEqual(heroineElement.src,first);
+heroineTick(.05,1000);assert.equal(heroine.x,1005.75);joystick.x=0;heroine.move=false;
+drawHeroine(0);const first=heroineElement.src;drawHeroine(240);assert.equal(heroineElement.src,first);drawHeroine(2400);assert.equal(heroineElement.src,first);
 // Solid counter edges, fence sides, rear and front; open central gate.
 for(const point of [[0,-40],[128,-40],[-128,-40],[340,0],[-340,0],[0,-225],[200,230],[-200,230],[94,230],[-94,230]])assert.ok(blockedAt(...point));
 for(const y of [150,200,230,270])assert.equal(blockedAt(0,y),false);
@@ -41,10 +41,10 @@ for(let i=0;i<100;i++)heroineTick(.05,1000);
 assert.ok(heroine.y>=18);joystick.y=0;
 // Walk from outside through the gate and around either end to behind the counter.
 function walkTo(x,y){
- const dx=x-heroine.x,dy=y-heroine.y,steps=Math.ceil(Math.hypot(dx,dy)/3);
+ const dx=x-heroine.x,dy=y-heroine.y,steps=Math.ceil(Math.hypot(dx,dy)/5.75);
  joystick.x=dx/Math.hypot(dx,dy);joystick.y=dy/Math.hypot(dx,dy);
  for(let i=0;i<steps;i++)heroineTick(.05,1000);
- assert.ok(Math.hypot(heroine.x-x,heroine.y-y)<4,'Blocked route to '+x+','+y);
+ assert.ok(Math.hypot(heroine.x-x,heroine.y-y)<6,'Blocked route to '+x+','+y);
  joystick.x=joystick.y=0;
 }
 for(const side of [-1,1]){
