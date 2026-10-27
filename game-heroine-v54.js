@@ -192,7 +192,7 @@ const counterCanvas=document.createElement("canvas"),counterCtx=counterCanvas.ge
 Object.assign(counterCanvas.style,{position:"fixed",inset:"0",width:"100%",height:"100%",pointerEvents:"none",zIndex:"3"});
 document.body.appendChild(counterCanvas);
 function drawCounter(){
- const g=counterCtx;g.save();g.translate(W/2-camX*zoom,H/2-camY*zoom);g.scale(zoom*1.65,zoom*1.65);
+ const g=counterCtx;g.save();g.translate(W/2-camX*zoom,H/2+(-65-camY)*zoom);g.scale(zoom,zoom);
  const poly=(a,c,e="#4b3225",w=2)=>{g.beginPath();g.moveTo(...a[0]);for(let i=1;i<a.length;i++)g.lineTo(...a[i]);g.closePath();g.fillStyle=c;g.fill();if(e){g.strokeStyle=e;g.lineWidth=w;g.lineJoin="round";g.stroke()}};
  const line=(a,b,c,w=2)=>{g.beginPath();g.moveTo(...a);g.lineTo(...b);g.strokeStyle=c;g.lineWidth=w;g.lineCap="round";g.stroke()};
  const curve=(pts,c,w=2)=>{g.beginPath();g.moveTo(pts[0],pts[1]);g.bezierCurveTo(...pts.slice(2));g.strokeStyle=c;g.lineWidth=w;g.lineCap="round";g.stroke()};
@@ -273,8 +273,8 @@ function drawMerchant(time=performance.now()){
  const idleNod=!sale&&idlePhase>5.5&&idlePhase<6.4?Math.sin(Math.PI*(idlePhase-5.5)/.9)*.5:0;
  const nod=Math.max(greeting,idleNod);
  const bob=Math.sin(t*1.6)*.5;
- const width=76,height=100;
- const x=-width/2,y=-115+bob;
+ const height=140,width=height*sprite.naturalWidth/sprite.naturalHeight;
+ const x=-width/2,y=-180+bob;
  g.save();
  g.translate(W/2-camX*zoom,H/2-camY*zoom);g.scale(zoom,zoom);
  // Pivot the entire intact sprite around the neck/shoulders.
@@ -400,8 +400,8 @@ function drawHeroine(now=performance.now()){
  heroineElement.style.visibility="visible";
  if(shownHeroineFrame!==frame.src){heroineElement.src=frame.src;shownHeroineFrame=frame.src;}
  // The visible figure occupies about 178 of the PNG's 248 pixels.
- // 124 world pixels gives an 89px figure, matching the merchant's 87px silhouette.
- const height=Math.min(124*zoom,H*.5,W*.8*frame.naturalHeight/frame.naturalWidth);
+ // 170 world pixels gives a 122px figure, matching the merchant's 122px silhouette.
+ const height=Math.min(170*zoom,H*.5,W*.8*frame.naturalHeight/frame.naturalWidth);
  const width=height*frame.naturalWidth/frame.naturalHeight;
  // Keep the whole frame below the HUD, including during camera easing and resize.
  const x=clamp(W/2+(heroine.x-camX)*zoom,width/2+8,W-width/2-8);
@@ -464,7 +464,7 @@ updateWoodHud();
 function drawWoodStorage(){
  if(!woodStored)return;
  const g=counterCtx;
- g.save();g.translate(W/2+(265-camX)*zoom,H/2+(85-camY)*zoom);g.scale(zoom*.55,zoom*.55);
+ g.save();g.translate(W/2+(245-camX)*zoom,H/2+(-10-camY)*zoom);g.scale(zoom*.55,zoom*.55);
  const visible=Math.min(woodStored,120),rows=Math.ceil(visible/7);
  g.fillStyle="#29201666";g.beginPath();g.ellipse(0,6,91,19,0,0,Math.PI*2);g.fill();
  // Timber rack, with carved uprights and a raised wooden base.
@@ -505,11 +505,14 @@ function blockedAt(x,y){
  if(rect(-365,-235,-322,245)||rect(322,-235,365,245))return true;
  // Front wall, with a central opening at the gate.
  if(rect(-365,211,-110,249)||rect(110,211,365,249))return true;
- // Gate posts and overhead support: walk through the opening, not the posts.
- if(rect(-115,55,-70,240)||rect(70,55,115,240))return true;
+ // Only the gatepost bases are solid. Their projected height and overhead lintel
+ // must not create invisible walls across the courtyard.
+ if(rect(-114,218,-74,243)||rect(74,218,114,243))return true;
+ // Open door leaves stay beside the passage at the threshold.
+ if(rect(-94,222,-58,238)||rect(58,222,94,238))return true;
  // Merchant counter: cannot walk through or stand on the worktop.
- if(rect(-210,-30,210,113))return true;
- if(rect(215,78,315,96))return true;
+ if(rect(-132,-85,132,4))return true;
+ if(rect(195,-17,295,1))return true;
  return false;
 }
 function heroineTick(dt,now){
@@ -528,7 +531,7 @@ function heroineTick(dt,now){
  }
  for(const pile of fallenWood){if(!pile.taken&&Math.hypot(pile.x-h.x,pile.y-h.y)<52){pile.taken=true;woodCarried+=3;updateWoodHud();}}
  // Deposit everything automatically when approaching the merchant's counter.
- if(woodCarried>0&&Math.abs(h.x)<90&&h.y>=125&&h.y<210){
+ if(woodCarried>0&&Math.abs(h.x)<100&&h.y>=22&&h.y<95){
   woodStored+=woodCarried;woodCarried=0;updateWoodHud();
  }
  const target=nearbyAttackTarget();
@@ -714,7 +717,7 @@ function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight
 canvas.addEventListener("click",e=>{
  // Until customers are implemented, tapping the merchant's counter previews a sale.
  const x=(e.clientX-W/2)/zoom+camX,y=(e.clientY-H/2)/zoom+camY;
- if(Math.abs(x)<115&&y>-40&&y<75)startMerchantSale(Math.random()>.5?"wood":"meat");
+ if(Math.abs(x)<132&&y>-85&&y<4)startMerchantSale(Math.random()>.5?"wood":"meat");
 });
 
 canvas.addEventListener("wheel",e=>{e.preventDefault();zoom=clamp(zoom*(e.deltaY>0?.9:1.1),.75,1.5);windDirty=true;render()},{passive:false});
