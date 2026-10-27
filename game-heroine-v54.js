@@ -384,14 +384,14 @@ for(const [state,count] of Object.entries({idle:5,walk_side:9,walk_front:7,walk_
 // Dedicated top-layer illustrated heroine, independent of foreground canvas clearing.
 const heroineElement=document.createElement("img");
 heroineElement.alt="Heldin";heroineElement.draggable=false;
-Object.assign(heroineElement.style,{position:"fixed",zIndex:"9",pointerEvents:"none",width:"180px",height:"248px",objectFit:"fill",objectPosition:"center center",left:"50%",top:"50%",transformOrigin:"center bottom",userSelect:"none"});
+Object.assign(heroineElement.style,{position:"fixed",zIndex:"9",pointerEvents:"none",width:"180px",height:"248px",objectFit:"contain",objectPosition:"center center",left:"50%",top:"50%",transformOrigin:"center bottom",userSelect:"none"});
 document.body.appendChild(heroineElement);
 let shownHeroineFrame="";
 function drawHeroine(now=performance.now()){
  const age=(now-heroine.attackAt)/1000,attacking=age>=0&&age<.64;
  const dx=joystick.x+(keys.l||keys.arrowright?1:0)-(keys.j||keys.arrowleft?1:0);
  const dy=joystick.y+(keys.k||keys.arrowdown?1:0)-(keys.i||keys.arrowup?1:0);
- let state="idle",index=0;
+ let state="idle",index=Math.floor(now/240)%heroineFrames.idle.length;
  if(attacking){state="attack";index=Math.min(3,Math.floor(age/.64*4));}
  else if(heroine.move){state=Math.abs(dy)>Math.abs(dx)*1.25?(dy<0?"walk_back":"walk_front"):"walk_side";index=Math.floor(heroine.walk*3.2)%heroineFrames[state].length;}
  const requested=heroineFrames[state][index];
@@ -401,7 +401,10 @@ function drawHeroine(now=performance.now()){
  if(shownHeroineFrame!==frame.src){heroineElement.src=frame.src;shownHeroineFrame=frame.src;}
  const x=W/2+(heroine.x-camX)*zoom,y=H/2+(heroine.y-camY)*zoom;
  heroineElement.style.left=x+"px";heroineElement.style.top=y+"px";
- heroineElement.style.width=(230*zoom)+"px";heroineElement.style.height=(315*zoom)+"px";
+ // Preserve the complete frame and its aspect ratio, including axe and hair.
+ const height=Math.min(372*zoom,H*.68,W*.9*frame.naturalHeight/frame.naturalWidth);
+ heroineElement.style.width=(height*frame.naturalWidth/frame.naturalHeight)+"px";
+ heroineElement.style.height=height+"px";
  heroineElement.style.transform="translate(-50%,-100%) scaleX("+(heroine.dir<0?-1:1)+")";
 }
 // Floating touchscreen joystick; movement follows finger displacement.
@@ -424,6 +427,7 @@ joyBase.addEventListener("pointerup",e=>{if(e.pointerId===joystick.pointer)stopJ
 joyBase.addEventListener("pointercancel",stopJoystick);
 window.addEventListener("blur",stopJoystick);
 const gatheredTrees=new Set();
+const treeChops=new Map();
 const fallenWood=[];
 let woodCarried=0;
 function paintLog(g,x,y,scale=1,angle=0){
@@ -456,7 +460,7 @@ updateWoodHud();
 function drawWoodStorage(){
  if(!woodStored)return;
  const g=counterCtx;
- g.save();g.translate(W/2+(310-camX)*zoom,H/2+(85-camY)*zoom);g.scale(zoom,zoom);
+ g.save();g.translate(W/2+(265-camX)*zoom,H/2+(85-camY)*zoom);g.scale(zoom*.55,zoom*.55);
  const visible=Math.min(woodStored,120),rows=Math.ceil(visible/7);
  g.fillStyle="#29201666";g.beginPath();g.ellipse(0,6,91,19,0,0,Math.PI*2);g.fill();
  // Timber rack, with carved uprights and a raised wooden base.
@@ -500,7 +504,8 @@ function blockedAt(x,y){
  // Gate posts and overhead support: walk through the opening, not the posts.
  if(rect(-115,55,-70,240)||rect(70,55,115,240))return true;
  // Merchant counter: cannot walk through or stand on the worktop.
- if(rect(-183,-25,183,113))return true;
+ if(rect(-210,-30,210,113))return true;
+ if(rect(215,78,315,96))return true;
  return false;
 }
 function heroineTick(dt,now){
@@ -528,11 +533,11 @@ function heroineTick(dt,now){
   heroineAttack();lastAutoTarget=target;
   // Damage is applied at the impact phase, not at the beginning of the swing.
  }
- if(lastAutoTarget&&now-h.attackAt>=320&&now-h.attackAt<370){
+ if(lastAutoTarget&&now-h.attackAt>=320){
   const target=lastAutoTarget;
   if(target.kind==="tree"){
    const tree=target.obj,key=tree.x.toFixed(1)+":"+tree.y.toFixed(1);
-   tree.chops=(tree.chops||0)+1;
+   tree.chops=(treeChops.get(key)||0)+1;treeChops.set(key,tree.chops);
    if(tree.chops>=3){gatheredTrees.add(key);tree.removed=true;fallenWood.push({x:tree.x,y:tree.y,taken:false});}
   }else if(target.kind==="bear")target.obj.health=(target.obj.health??3)-1;
   lastAutoTarget=null;
@@ -699,8 +704,9 @@ function drawTrees(time){
   }
   g.restore();g.restore();
  }
+ drawFallenWood();
 }
-function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);windCanvas.width=canvas.width;windCanvas.height=canvas.height;counterCanvas.width=canvas.width;counterCanvas.height=canvas.height;treeCanvas.width=canvas.width;treeCanvas.height=canvas.height;trees=[];windDirty=true;render()}
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;camX=heroine.x;camY=heroine.y-H*.22/zoom;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);windCanvas.width=canvas.width;windCanvas.height=canvas.height;counterCanvas.width=canvas.width;counterCanvas.height=canvas.height;treeCanvas.width=canvas.width;treeCanvas.height=canvas.height;trees=[];windDirty=true;render()}
 canvas.addEventListener("click",e=>{
  // Until customers are implemented, tapping the merchant's counter previews a sale.
  const x=(e.clientX-W/2)/zoom+camX,y=(e.clientY-H/2)/zoom+camY;
@@ -709,6 +715,5 @@ canvas.addEventListener("click",e=>{
 
 canvas.addEventListener("wheel",e=>{e.preventDefault();zoom=clamp(zoom*(e.deltaY>0?.9:1.1),.75,1.5);windDirty=true;render()},{passive:false});
 const keys={};addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
-let last=performance.now();function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;heroineTick(dt,now);const ease=1-Math.exp(-12*dt);camX+=(heroine.x-camX)*ease;camY+=(heroine.y-camY)*ease;render();if(now-lastWindFrame>50){drawWind(now);drawTrees(now);renderForeground(now);lastWindFrame=now}requestAnimationFrame(loop)}
-camX=heroine.x;camY=heroine.y;
+let last=performance.now();function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;heroineTick(dt,now);const ease=1-Math.exp(-12*dt);camX+=(heroine.x-camX)*ease;camY+=(heroine.y-H*.22/zoom-camY)*ease;render();if(now-lastWindFrame>50){drawWind(now);drawTrees(now);renderForeground(now);lastWindFrame=now}requestAnimationFrame(loop)}
 resize();requestAnimationFrame(loop);
